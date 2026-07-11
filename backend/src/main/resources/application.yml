@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: fm-lite
+  datasource:
+    # 로컬 개발 기본값: docker run 으로 띄운 PostgreSQL (README 참조)
+    # Supabase 연결 시 환경변수로 덮어쓴다:
+    #   SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres
+    #   SPRING_DATASOURCE_USERNAME=postgres.klkjooqskbmrskbjowrb
+    #   SPRING_DATASOURCE_PASSWORD=<db password>
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/fmlite}
+    username: ${SPRING_DATASOURCE_USERNAME:fmlite}
+    password: ${SPRING_DATASOURCE_PASSWORD:fmlite}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+
+app:
+  cors:
+    allowed-origins: ${FRONTEND_ORIGIN:http://localhost:3000}
+
+server:
+  port: ${PORT:8080}

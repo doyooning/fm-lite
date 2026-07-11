@@ -1,0 +1,103 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { saveGamesApi, teamsApi } from '@/lib/api';
+import { ensureUser, setSaveGameId } from '@/lib/storage';
+import { Button, Card, ErrorBox, GradeBadge, Spinner, StatBar } from '@/components/ui';
+import type { TeamDetail, TeamSummary } from '@/types/api';
+
+export default function NewGamePage() {
+  const router = useRouter();
+  const [teams, setTeams] = useState<TeamSummary[] | null>(null);
+  const [selected, setSelected] = useState<TeamDetail | null>(null);
+  const [error, setError] = useState('');
+  const [starting, setStarting] = useState(false);
+
+  useEffect(() => {
+    teamsApi.list().then(setTeams).catch((e) => setError(e.message));
+  }, []);
+
+  const pick = (teamId: number) =>
+    teamsApi.detail(teamId).then(setSelected).catch((e) => setError(e.message));
+
+  const start = async () => {
+    if (!selected) return;
+    setStarting(true);
+    try {
+      await ensureUser();
+      const save = await saveGamesApi.create(selected.id);
+      setSaveGameId(save.id);
+      router.push(`/game/${save.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '게임 생성 실패');
+      setStarting(false);
+    }
+  };
+
+  return (
+    <main className="mx-auto w-full max-w-4xl p-6">
+      <h1 className="text-2xl font-bold">팀 선택</h1>
+      <p className="mt-1 text-sm text-zinc-400">지휘할 팀을 고르세요. 등급이 낮을수록 어려운 도전입니다.</p>
+
+      {error && <div className="mt-4"><ErrorBox message={error} /></div>}
+      {!teams && !error && <Spinner />}
+
+      <div className="mt-6 grid gap-6 md:grid-cols-[1fr_320px]">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {teams?.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => pick(t.id)}
+              className={`rounded-xl border p-4 text-left transition hover:border-emerald-500/50 ${
+                selected?.id === t.id ? 'border-emerald-500 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900/70'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold">{t.name}</span>
+                <GradeBadge grade={t.grade} label={t.gradeLabel} />
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs text-zinc-400">{t.description}</p>
+              <p className="mt-2 text-xs text-zinc-500">평균 능력치 <span className="font-semibold text-zinc-300">{t.avgRating}</span></p>
+            </button>
+          ))}
+        </div>
+
+        <div>
+          {selected ? (
+            <Card className="sticky top-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold">{selected.name}</h2>
+                <GradeBadge grade={selected.grade} label={selected.gradeLabel} />
+              </div>
+              <p className="mt-1 text-sm text-zinc-400">{selected.description}</p>
+
+              <div className="mt-4 flex flex-col gap-1.5">
+                <StatBar label="공격" value={selected.powerByArea.attack} />
+                <StatBar label="중원" value={selected.powerByArea.midfield} />
+                <StatBar label="수비" value={selected.powerByArea.defense} />
+                <StatBar label="GK" value={selected.powerByArea.goalkeeping} />
+              </div>
+
+              <h3 className="mt-4 text-xs font-semibold text-zinc-500">주요 선수</h3>
+              <ul className="mt-1 text-sm">
+                {selected.keyPlayers.map((p) => (
+                  <li key={p.id} className="flex justify-between py-0.5">
+                    <span>{p.name} <span className="text-xs text-zinc-500">{p.position}</span></span>
+                    <span className="tabular-nums text-zinc-300">{p.overall}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button onClick={start} disabled={starting} className="mt-4 w-full py-2.5">
+                {starting ? '대회 준비 중...' : '이 팀으로 시작'}
+              </Button>
+            </Card>
+          ) : (
+            <Card className="text-center text-sm text-zinc-500">팀을 선택하면 상세 정보가 표시됩니다.</Card>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
