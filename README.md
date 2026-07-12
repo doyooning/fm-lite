@@ -44,3 +44,4 @@ fm-lite/
 | [docs/05-simulation-design.md](docs/05-simulation-design.md) | 경기 시뮬레이션 서비스 구조 + 최소 알고리즘 |
 | [docs/06-frontend-screens.md](docs/06-frontend-screens.md) | Next.js 화면 구성 및 라우팅 |
 | [docs/07-roadmap.md](docs/07-roadmap.md) | 구현 우선순위(8단계) + 확장 기능 목록 |
+| [docs/08-access-and-deployment.md](docs/08-access-and-deployment.md) | 접속 구조(프론트=Vercel/백엔드=로컬) 동작 조건 + 외부 접속 전환 가이드 |
