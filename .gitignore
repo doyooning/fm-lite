@@ -4,6 +4,14 @@ env/
 .env.local
 .env*.local
 
+# 설정 파일 (환경별로 로컬 관리 — 저장소에는 *.example 템플릿만 커밋)
+*.yml
+*.yaml
+*.properties
+!*.example
+# 예외: 빌드 도구 파일(앱 설정 아님)은 저장소에 유지해야 빌드가 가능
+!**/gradle-wrapper.properties
+
 # Backend
 backend/build/
 backend/.gradle/
