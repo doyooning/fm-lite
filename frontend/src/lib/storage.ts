@@ -26,3 +26,12 @@ export async function ensureUser(): Promise<string> {
   localStorage.setItem(USER_KEY, user.id);
   return user.id;
 }
+
+/** 보관된 익명 id 가 서버에 없을 때(예: DB 초기화) 새로 발급받아 교체 */
+export async function resetUser(): Promise<string> {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(SAVE_KEY); // 이전 저장 게임도 함께 무효
+  }
+  return ensureUser();
+}

@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveGamesApi, teamsApi } from '@/lib/api';
-import { ensureUser, setSaveGameId } from '@/lib/storage';
+import { ensureUser, resetUser, setSaveGameId } from '@/lib/storage';
+import { ApiError } from '@/lib/api/client';
 import { Button, Card, ErrorBox, GradeBadge, Spinner, StatBar } from '@/components/ui';
-import type { TeamDetail, TeamSummary } from '@/types/api';
+import type { SaveGame, TeamDetail, TeamSummary } from '@/types/api';
 
 export default function NewGamePage() {
   const router = useRouter();
@@ -26,7 +27,18 @@ export default function NewGamePage() {
     setStarting(true);
     try {
       await ensureUser();
-      const save = await saveGamesApi.create(selected.id);
+      let save: SaveGame;
+      try {
+        save = await saveGamesApi.create(selected.id);
+      } catch (e) {
+        // 보관된 익명 id 가 서버에 없으면(예: DB 초기화) 재발급 후 1회 재시도
+        if (e instanceof ApiError && (e.status === 404 || e.code === 'NOT_FOUND')) {
+          await resetUser();
+          save = await saveGamesApi.create(selected.id);
+        } else {
+          throw e;
+        }
+      }
       setSaveGameId(save.id);
       router.push(`/game/${save.id}`);
     } catch (e) {

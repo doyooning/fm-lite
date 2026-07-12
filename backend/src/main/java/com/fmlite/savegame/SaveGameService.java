@@ -14,6 +14,7 @@ import com.fmlite.competition.Round;
 import com.fmlite.team.Team;
 import com.fmlite.team.TeamGrade;
 import com.fmlite.team.TeamRepository;
+import com.fmlite.user.User;
 import com.fmlite.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,11 @@ public class SaveGameService {
     /** 새 게임 시작: SaveGame + Competition + 8강 대진 생성 (강팀 2팀은 반대 사이드 시드 배정) */
     @Transactional
     public SaveGameResponse create(UUID userId, Long teamId) {
-        if (!userRepository.existsById(userId)) throw BusinessException.notFound("사용자");
+        // 익명 사용자: 클라이언트가 보관한 id 가 DB 초기화 등으로 없으면 그 id 로 자동 생성(자기치유).
+        // save_games.user_id FK 를 만족시키려면 SaveGame INSERT 전에 users 행이 확정돼야 하므로 flush.
+        if (!userRepository.existsById(userId)) {
+            userRepository.saveAndFlush(new User(userId, "감독"));
+        }
         Team userTeam = teamRepository.findById(teamId)
                 .orElseThrow(() -> BusinessException.notFound("팀"));
 

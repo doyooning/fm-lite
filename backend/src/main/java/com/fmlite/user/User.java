@@ -27,7 +27,12 @@ public class User {
     private Instant createdAt;
 
     public User(String nickname) {
-        this.id = UUID.randomUUID();
+        this(UUID.randomUUID(), nickname);
+    }
+
+    /** 클라이언트가 보관한 익명 id 로 사용자를 생성한다 (DB 초기화 등으로 유실된 경우 자기치유용) */
+    public User(UUID id, String nickname) {
+        this.id = id;
         this.nickname = (nickname == null || nickname.isBlank()) ? "감독" : nickname;
         this.createdAt = Instant.now();
     }
