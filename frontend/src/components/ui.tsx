@@ -1,5 +1,24 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
+
+export function BackButton({ label = '뒤로', fallbackHref }: { label?: string; fallbackHref?: string }) {
+  const router = useRouter();
+  const goBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+    else if (fallbackHref) router.push(fallbackHref);
+  };
+  return (
+    <button
+      onClick={goBack}
+      className="mb-3 inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
+    >
+      <span aria-hidden>←</span> {label}
+    </button>
+  );
+}
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (

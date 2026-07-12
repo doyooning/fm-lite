@@ -49,7 +49,10 @@ public class MatchEngine {
             SimulationState state
     ) {}
 
-    public record RunOutcome(List<EventDraft> events, boolean regularTimeFinished, boolean waitingChoice) {}
+    public record RunOutcome(List<EventDraft> events, boolean regularTimeFinished,
+                             boolean waitingChoice, boolean waitingHalftime) {}
+
+    private static final int HALF_TIME_TICK = 9;   // 45분
 
     public RunOutcome run(EngineContext ctx) {
         SimulationState st = ctx.state();
@@ -64,6 +67,16 @@ public class MatchEngine {
         while (st.getCurrentTick() < TOTAL_TICKS) {
             int tick = st.getCurrentTick();
 
+            // 하프타임: 후반 시작 전에 멈추고 전술 변경 기회를 준다 (사용자 경기만)
+            if (tick == HALF_TIME_TICK && !st.isHalftimePrompted()) {
+                st.setHalftimePrompted(true);
+                events.add(EventDraft.info(45, MatchEventType.HALF_TIME,
+                        eventGenerator.halfTime(st.getHomeScore(), st.getAwayScore())));
+                if (userMatch) {
+                    return new RunOutcome(events, false, false, true);
+                }
+            }
+
             // 선택지 지점: 해당 틱을 플레이하기 전에 멈춘다
             if (userMatch && isChoiceTick(tick) && !st.getPromptedChoiceTicks().contains(tick)) {
                 st.getPromptedChoiceTicks().add(tick);
@@ -74,15 +87,10 @@ public class MatchEngine {
                 int oppScore = st.scoreOf(user != st.getHome());
                 ChoicePrompt prompt = choiceService.buildPrompt(myScore, oppScore, user.getMomentum(), tick * 5);
                 events.add(EventDraft.choice(tick * 5, prompt.question(), prompt.options()));
-                return new RunOutcome(events, false, true);
+                return new RunOutcome(events, false, true, false);
             }
 
             Random rng = new Random(st.getSeed() ^ (7919L * (tick + 1)));
-
-            if (tick == 9) {
-                events.add(EventDraft.info(45, MatchEventType.HALF_TIME,
-                        eventGenerator.halfTime(st.getHomeScore(), st.getAwayScore())));
-            }
 
             playTick(ctx, st, tick, rng, events);
 
@@ -93,7 +101,7 @@ public class MatchEngine {
             st.setCurrentTick(tick + 1);
         }
 
-        return new RunOutcome(events, true, false);
+        return new RunOutcome(events, true, false, false);
     }
 
     private void playTick(EngineContext ctx, SimulationState st, int tick, Random rng, List<EventDraft> events) {

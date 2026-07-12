@@ -16,7 +16,7 @@ public record PlayerResponse(
     public record Stats(int attack, int defense, int passing, int speed,
                         int stamina, int mentality, int finishing, int goalkeeping) {}
 
-    public record Trait(String code, String name, String description) {}
+    public record Trait(String code, String name, String description, boolean positive) {}
 
     public static PlayerResponse from(Player p) {
         return new PlayerResponse(
@@ -24,7 +24,7 @@ public record PlayerResponse(
                 new Stats(p.getAttack(), p.getDefense(), p.getPassing(), p.getSpeed(),
                         p.getStamina(), p.getMentality(), p.getFinishing(), p.getGoalkeeping()),
                 p.traitList().stream()
-                        .map(t -> new Trait(t.name(), t.getLabel(), t.getDescription()))
+                        .map(t -> new Trait(t.name(), t.getLabel(), t.getDescription(), t.isPositive()))
                         .toList()
         );
     }

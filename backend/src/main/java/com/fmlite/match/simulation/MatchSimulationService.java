@@ -9,6 +9,7 @@ import com.fmlite.match.MatchStatus;
 import com.fmlite.match.dto.ChoiceRequest;
 import com.fmlite.match.dto.MatchEventResponse;
 import com.fmlite.match.dto.MatchProgressResponse;
+import com.fmlite.match.dto.TacticRequest;
 import com.fmlite.match.event.ChoiceOption;
 import com.fmlite.match.event.MatchEvent;
 import com.fmlite.match.event.MatchEventRepository;
@@ -17,9 +18,11 @@ import com.fmlite.match.simulation.MatchEngine.EngineContext;
 import com.fmlite.match.simulation.model.ActiveEffect;
 import com.fmlite.match.simulation.model.EventDraft;
 import com.fmlite.match.simulation.model.SimulationState;
+import com.fmlite.match.simulation.model.TacticSnapshot;
 import com.fmlite.match.simulation.model.TeamSimState;
 import com.fmlite.match.tactic.Tactic;
 import com.fmlite.match.tactic.TacticRepository;
+import com.fmlite.match.tactic.TacticService;
 import com.fmlite.player.Player;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,7 @@ public class MatchSimulationService {
     private final MatchEventRepository matchEventRepository;
     private final AiMatchRunner aiMatchRunner;
     private final TournamentProgressService tournamentProgressService;
+    private final TacticService tacticService;
 
     @Transactional
     public MatchProgressResponse start(Long matchId, UUID userId) {
@@ -144,8 +148,44 @@ public class MatchSimulationService {
             return snapshot(match, collected);
         }
 
-        match.updateState(state, MatchStatus.WAITING_CHOICE);
+        MatchStatus paused = outcome.waitingHalftime()
+                ? MatchStatus.WAITING_HALFTIME : MatchStatus.WAITING_CHOICE;
+        match.updateState(state, paused);
         return snapshot(match, collected);
+    }
+
+    /** 하프타임 전술(포메이션/성향/압박/라인/공격방식 + 선발 라인업) 변경 후 후반 재개 */
+    @Transactional
+    public MatchProgressResponse submitHalftimeTactics(Long matchId, UUID userId, TacticRequest request) {
+        MatchContext ctx = matchAccess.userContext(matchId, userId);
+        Match match = ctx.match();
+        if (match.getStatus() != MatchStatus.WAITING_HALFTIME) {
+            throw BusinessException.conflict("NOT_WAITING_HALFTIME", "하프타임 상태가 아닙니다.");
+        }
+
+        List<Long> lineup = tacticService.resolveLineup(ctx.userTeamId(), request);
+
+        SimulationState state = match.getSimulationState();
+        boolean userIsHome = !state.getHome().isAiControlled();
+        TeamSimState userSide = state.side(userIsHome);
+        userSide.setTactic(new TacticSnapshot(request.formation().getValue(), request.mentality().name(),
+                request.pressing().name(), request.lineHeight().name(), request.attackStyle().name()));
+        userSide.setLineup(lineup);   // 새로 투입된 선수는 컨디션 맵에 없으면 기본(1.0)으로 처리됨
+        match.updateState(state, MatchStatus.IN_PROGRESS);
+
+        List<MatchEventResponse> events = eventWriter.persist(match, state, List.of(
+                EventDraft.info(state.minuteNow(), MatchEventType.COACH_DECISION,
+                        "하프타임 전술 변경: " + request.formation().getValue()
+                                + " · " + mentalityLabel(request.mentality().name()))));
+        return runAndPersist(match, new ArrayList<>(events));
+    }
+
+    private String mentalityLabel(String mentality) {
+        return switch (mentality) {
+            case "ATTACKING" -> "공격적";
+            case "DEFENSIVE" -> "수비적";
+            default -> "균형";
+        };
     }
 
     private MatchProgressResponse snapshot(Match match, List<MatchEventResponse> events) {

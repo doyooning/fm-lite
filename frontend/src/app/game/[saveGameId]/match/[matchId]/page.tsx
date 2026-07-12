@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { matchesApi } from '@/lib/api';
+import { matchesApi, teamsApi } from '@/lib/api';
 import { Card, ErrorBox, Spinner } from '@/components/ui';
-import type { MatchEvent, MatchInfo, MatchStatus } from '@/types/api';
+import TacticForm from '@/components/tactics/TacticForm';
+import { isValidLineup } from '@/lib/lineup';
+import type { MatchEvent, MatchInfo, MatchStatus, Player, Tactic } from '@/types/api';
 
 const REVEAL_INTERVAL_MS = 750;
 
@@ -36,6 +38,9 @@ export default function MatchLivePage() {
   const [status, setStatus] = useState<MatchStatus>('SCHEDULED');
   const [pendingChoice, setPendingChoice] = useState<MatchEvent | null>(null);
   const [choosing, setChoosing] = useState(false);
+  const [squad, setSquad] = useState<Player[]>([]);
+  const [htTactic, setHtTactic] = useState<Tactic | null>(null);
+  const [submittingHt, setSubmittingHt] = useState(false);
   const [error, setError] = useState('');
   const didInit = useRef(false);
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -66,6 +71,15 @@ export default function MatchLivePage() {
       }
     })();
   }, [mid]);
+
+  // 하프타임 대비: 내 스쿼드 + 현재 전술 미리 로드
+  useEffect(() => {
+    if (!info) return;
+    const userTeamId = info.isUserHome ? info.homeTeam.id : info.awayTeam.id;
+    Promise.all([teamsApi.players(userTeamId), matchesApi.getMyTactic(mid)])
+      .then(([players, tac]) => { setSquad(players); setHtTactic(tac.tactic); })
+      .catch(() => {});
+  }, [info, mid]);
 
   // 이벤트 순차 공개 (seq 기준 중복 방지 — StrictMode/멱등 재시작 대응)
   useEffect(() => {
@@ -105,6 +119,24 @@ export default function MatchLivePage() {
       setChoosing(false);
     }
   }, [mid, pendingChoice, choosing]);
+
+  const submitHalftime = useCallback(async () => {
+    if (!htTactic || submittingHt) return;
+    if (!isValidLineup(htTactic.lineup, squad, htTactic.formation)) {
+      setError('선발 라인업이 포메이션 인원과 맞지 않습니다.');
+      return;
+    }
+    setSubmittingHt(true);
+    try {
+      const p = await matchesApi.halftimeTactics(mid, htTactic);
+      setStatus(p.matchStatus);
+      setQueue((q) => [...q, ...p.events]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '하프타임 전술 적용 실패');
+    } finally {
+      setSubmittingHt(false);
+    }
+  }, [mid, htTactic, squad, submittingHt]);
 
   if (error) return <main className="mx-auto max-w-2xl p-6"><ErrorBox message={error} /></main>;
   if (!info) return <Spinner text="경기장 입장 중..." />;
@@ -156,6 +188,24 @@ export default function MatchLivePage() {
         )}
         <div ref={feedEndRef} />
       </div>
+
+      {/* 하프타임 전술 변경 */}
+      {status === 'WAITING_HALFTIME' && queue.length === 0 && htTactic && (
+        <Card className="mt-4 border-amber-500/40 bg-amber-500/5">
+          <p className="text-sm font-semibold text-amber-200">⏸ 하프타임 — 후반 전술을 조정하세요</p>
+          <p className="mt-0.5 text-xs text-zinc-400">포메이션·성향과 선발 선수를 바꿔 후반에 대비할 수 있습니다.</p>
+          <div className="mt-3">
+            <TacticForm value={htTactic} squad={squad} onChange={setHtTactic} compact />
+          </div>
+          <button
+            onClick={submitHalftime}
+            disabled={submittingHt}
+            className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-40"
+          >
+            {submittingHt ? '적용 중...' : '후반 시작'}
+          </button>
+        </Card>
+      )}
 
       {/* 선택지 */}
       {pendingChoice && queue.length === 0 && (

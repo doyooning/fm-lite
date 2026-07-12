@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { competitionsApi, saveGamesApi } from '@/lib/api';
 import BracketView from '@/components/BracketView';
-import { Card, ErrorBox, Spinner } from '@/components/ui';
+import { BackButton, Card, ErrorBox, Spinner } from '@/components/ui';
 import type { Bracket, SaveGame } from '@/types/api';
 
 export default function CompetitionPage() {
@@ -34,6 +34,7 @@ export default function CompetitionPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl p-6">
+      <BackButton fallbackHref={`/game/${saveGameId}`} />
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-bold">{bracket.name}</h1>
         <span className="text-sm text-zinc-400">

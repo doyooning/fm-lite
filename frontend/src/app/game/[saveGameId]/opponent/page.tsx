@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { matchesApi, saveGamesApi } from '@/lib/api';
-import { Card, ErrorBox, GradeBadge, LinkButton, Spinner } from '@/components/ui';
+import { BackButton, Card, ErrorBox, GradeBadge, LinkButton, Spinner } from '@/components/ui';
 import type { OpponentAnalysis } from '@/types/api';
 
 const tacticLabels: Record<string, string> = {
@@ -13,18 +13,25 @@ const tacticLabels: Record<string, string> = {
 };
 
 function CompareBar({ label, mine, theirs }: { label: string; mine: number; theirs: number }) {
-  const total = mine + theirs;
-  const minePct = (mine / total) * 100;
+  // 능력치는 대개 60~90 범위라 원시 비율(78:72=52%)로는 차이가 잘 안 보인다.
+  // 50% 기준 편차를 지수(p=5)로 증폭해 우세를 또렷하게 보여준다. (예: 78:72 → 약 60:40)
+  const r = mine / (mine + theirs);
+  const p = 5;
+  const amplified = Math.pow(r, p) / (Math.pow(r, p) + Math.pow(1 - r, p));
+  const minePct = Math.max(8, Math.min(92, amplified * 100)); // 완전 0/100 은 피함
+  const lead = mine > theirs ? 'text-emerald-400' : mine < theirs ? 'text-zinc-500' : 'text-zinc-400';
+  const leadT = theirs > mine ? 'text-red-400' : theirs < mine ? 'text-zinc-500' : 'text-zinc-400';
   return (
     <div>
       <div className="flex justify-between text-xs text-zinc-400">
-        <span className="tabular-nums font-semibold text-emerald-400">{mine}</span>
+        <span className={`tabular-nums font-semibold ${lead}`}>{mine}</span>
         <span>{label}</span>
-        <span className="tabular-nums font-semibold text-red-400">{theirs}</span>
+        <span className={`tabular-nums font-semibold ${leadT}`}>{theirs}</span>
       </div>
-      <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-zinc-800">
-        <div className="bg-emerald-500" style={{ width: `${minePct}%` }} />
-        <div className="bg-red-500/70" style={{ width: `${100 - minePct}%` }} />
+      <div className="mt-1 flex h-2.5 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-zinc-700">
+        <div className="bg-emerald-500 transition-all" style={{ width: `${minePct}%` }} />
+        <div className="w-px shrink-0 bg-zinc-950" />
+        <div className="bg-red-500 transition-all" style={{ width: `${100 - minePct}%` }} />
       </div>
     </div>
   );
@@ -61,6 +68,7 @@ export default function OpponentPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl p-6">
+      <BackButton fallbackHref={`/game/${id}`} />
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">{analysis.team.name}</h1>
         <GradeBadge grade={analysis.team.grade} label={analysis.team.gradeLabel} />

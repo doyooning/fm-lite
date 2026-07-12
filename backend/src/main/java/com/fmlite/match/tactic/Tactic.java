@@ -11,8 +11,11 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Table(name = "tactics")
@@ -49,23 +52,29 @@ public class Tactic {
     @Column(name = "attack_style", nullable = false)
     private AttackStyle attackStyle;
 
+    /** 사용자 지정 선발 11명 (player_id 순서). null 이면 포메이션 기준 베스트 XI 자동 선발 */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<Long> lineup;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     public Tactic(Long matchId, Long teamId, Formation formation, Mentality mentality,
-                  Pressing pressing, LineHeight lineHeight, AttackStyle attackStyle) {
+                  Pressing pressing, LineHeight lineHeight, AttackStyle attackStyle, List<Long> lineup) {
         this.matchId = matchId;
         this.teamId = teamId;
-        update(formation, mentality, pressing, lineHeight, attackStyle);
+        update(formation, mentality, pressing, lineHeight, attackStyle, lineup);
     }
 
     public void update(Formation formation, Mentality mentality, Pressing pressing,
-                       LineHeight lineHeight, AttackStyle attackStyle) {
+                       LineHeight lineHeight, AttackStyle attackStyle, List<Long> lineup) {
         this.formation = formation;
         this.mentality = mentality;
         this.pressing = pressing;
         this.lineHeight = lineHeight;
         this.attackStyle = attackStyle;
+        this.lineup = lineup;
         this.updatedAt = Instant.now();
     }
 }

@@ -65,17 +65,47 @@ while (true) {
   const analysis = await api('GET', `/matches/${m.matchId}/opponent-analysis`);
   console.log(`  분석: 강점 ${analysis.strengths.length} / 약점 ${analysis.weaknesses.length} / 키플레이어 ${analysis.keyPlayers.length} / 예상전술 ${analysis.expectedTactic.formation}`);
 
+  // 기본 저장(라인업 자동 = 베스트 XI)
+  const def = await api('GET', `/matches/${m.matchId}/tactics/me`);
+  assert(Array.isArray(def.tactic.lineup) && def.tactic.lineup.length === 11, 'default lineup should be 11, got ' + (def.tactic.lineup?.length));
+
+  // 커스텀 라인업: 4-3-3 베스트 XI 에서 후보 MF 한 명을 교체 투입
+  const players = await api('GET', `/teams/${m.isUserHome ? m.homeTeam.id : m.awayTeam.id}/players`);
+  const bestXI = def.tactic.lineup;
+  const benchMf = players.find(p => p.position === 'MF' && !bestXI.includes(p.id));
+  const starterMf = players.filter(p => p.position === 'MF' && bestXI.includes(p.id))
+    .sort((a, b) => a.overall - b.overall)[0];
+  const customLineup = bestXI.map(id => id === starterMf.id ? benchMf.id : id);
+
   await api('PUT', `/matches/${m.matchId}/tactics/me`, {
     formation: '4-3-3', mentality: 'BALANCED', pressing: 'HIGH', lineHeight: 'NORMAL', attackStyle: 'WIDE',
+    lineup: customLineup,
   });
   const tac = await api('GET', `/matches/${m.matchId}/tactics/me`);
   assert(tac.submitted === true && tac.tactic.pressing === 'HIGH', 'tactic roundtrip');
-  console.log('  전술 저장 OK');
+  assert(tac.tactic.lineup.includes(benchMf.id) && !tac.tactic.lineup.includes(starterMf.id), 'custom lineup persisted (swap)');
+  console.log(`  전술 저장 OK (라인업 교체: ${starterMf.name} → ${benchMf.name})`);
+
+  // 잘못된 라인업(10명)은 거부되어야 함
+  const bad = await fetch(BASE + `/matches/${m.matchId}/tactics/me`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+    body: JSON.stringify({ formation: '4-3-3', mentality: 'BALANCED', pressing: 'HIGH', lineHeight: 'NORMAL', attackStyle: 'WIDE', lineup: customLineup.slice(0, 10) }),
+  });
+  assert(bad.status === 400, 'invalid lineup should 400, got ' + bad.status);
 
   let progress = await api('POST', `/matches/${m.matchId}/start`);
   let allEvents = [...progress.events];
-  let choices = 0;
-  while (progress.matchStatus === 'WAITING_CHOICE') {
+  let choices = 0, halftimes = 0;
+  while (progress.matchStatus === 'WAITING_CHOICE' || progress.matchStatus === 'WAITING_HALFTIME') {
+    if (progress.matchStatus === 'WAITING_HALFTIME') {
+      console.log(`  ⏸ 하프타임 전술 변경 (3-5-2 수비적, 라인업 자동)`);
+      progress = await api('POST', `/matches/${m.matchId}/halftime-tactics`, {
+        formation: '3-5-2', mentality: 'DEFENSIVE', pressing: 'NORMAL', lineHeight: 'LOW', attackStyle: 'COUNTER',
+      });
+      allEvents.push(...progress.events);
+      halftimes++;
+      continue;
+    }
     const choiceEvent = progress.events.filter(e => e.requiresChoice).pop();
     assert(choiceEvent, 'WAITING_CHOICE but no choice event');
     const pick = choiceEvent.choiceOptions[choices % choiceEvent.choiceOptions.length];
@@ -86,6 +116,7 @@ while (true) {
   }
   assert(progress.matchStatus === 'FINISHED', 'match should finish, got ' + progress.matchStatus);
   assert(choices === 3, 'expected 3 choices, got ' + choices);
+  assert(halftimes === 1, 'expected 1 halftime, got ' + halftimes);
 
   const result = await api('GET', `/matches/${m.matchId}/result`);
   const pen = result.penaltyHomeScore != null ? ` (PK ${result.penaltyHomeScore}:${result.penaltyAwayScore})` : '';

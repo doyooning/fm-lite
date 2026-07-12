@@ -48,6 +48,7 @@ export interface Trait {
   code: string;
   name: string;
   description: string;
+  positive: boolean;
 }
 
 export interface Player {
@@ -95,14 +96,18 @@ export interface NextMatchResponse {
   match: NextMatch | null;
 }
 
-export type MatchStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'WAITING_CHOICE' | 'FINISHED';
+export type MatchStatus =
+  | 'SCHEDULED' | 'IN_PROGRESS' | 'WAITING_CHOICE' | 'WAITING_HALFTIME' | 'FINISHED';
+
+export type Formation = '4-3-3' | '4-2-3-1' | '3-5-2';
 
 export interface Tactic {
-  formation: '4-3-3' | '4-2-3-1' | '3-5-2';
+  formation: Formation;
   mentality: 'ATTACKING' | 'BALANCED' | 'DEFENSIVE';
   pressing: 'LOW' | 'NORMAL' | 'HIGH';
   lineHeight: 'LOW' | 'NORMAL' | 'HIGH';
   attackStyle: 'CENTER' | 'WIDE' | 'COUNTER' | 'POSSESSION';
+  lineup?: number[];
 }
 
 export interface TacticResponse {

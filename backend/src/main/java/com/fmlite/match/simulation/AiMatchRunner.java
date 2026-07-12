@@ -53,6 +53,6 @@ public class AiMatchRunner {
         TacticSnapshot snap = opponentAi.initialTactic(
                 teamRepository.findById(teamId).orElseThrow());
         return new Tactic(matchId, teamId, snap.formationEnum(), snap.mentalityEnum(),
-                snap.pressingEnum(), snap.lineHeightEnum(), snap.attackStyleEnum());
+                snap.pressingEnum(), snap.lineHeightEnum(), snap.attackStyleEnum(), null);
     }
 }

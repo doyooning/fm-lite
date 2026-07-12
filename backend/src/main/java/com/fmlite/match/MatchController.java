@@ -73,6 +73,13 @@ public class MatchController {
         return ApiResponse.ok(matchSimulationService.submitChoice(matchId, userId, request));
     }
 
+    @PostMapping("/halftime-tactics")
+    public ApiResponse<MatchProgressResponse> halftimeTactics(@PathVariable Long matchId,
+                                                              @RequestHeader("X-User-Id") UUID userId,
+                                                              @Valid @RequestBody TacticRequest request) {
+        return ApiResponse.ok(matchSimulationService.submitHalftimeTactics(matchId, userId, request));
+    }
+
     @GetMapping("/events")
     public ApiResponse<MatchProgressResponse> events(@PathVariable Long matchId,
                                                      @RequestParam(required = false) Integer afterSeq) {

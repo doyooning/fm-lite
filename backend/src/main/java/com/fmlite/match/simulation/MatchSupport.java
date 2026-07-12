@@ -67,7 +67,12 @@ public class MatchSupport {
         Tactic tactic = tactics.get(teamId);
         ts.setTactic(TacticSnapshot.from(tactic));
         List<Player> squad = squads.get(teamId);
-        ts.setLineup(lineupSelector.select(squad, tactic.getFormation()));
+        // 사용자가 지정한 라인업이 유효하면 사용, 아니면 베스트 XI 자동 선발
+        List<Long> lineup = tactic.getLineup() != null
+                && lineupSelector.isValidLineup(tactic.getLineup(), squad, tactic.getFormation())
+                ? tactic.getLineup()
+                : lineupSelector.select(squad, tactic.getFormation());
+        ts.setLineup(lineup);
         for (Long playerId : ts.getLineup()) {
             double condition = CONDITION_MIN + rng.nextDouble() * (CONDITION_MAX - CONDITION_MIN);
             ts.getCondition().put(playerId, Math.round(condition * 100) / 100.0);

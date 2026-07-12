@@ -23,9 +23,8 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center gap-8 p-6">
       <div className="text-center">
-        <p className="text-sm font-semibold tracking-widest text-emerald-500">FOOTBALL MANAGER LITE</p>
-        <h1 className="mt-2 text-5xl font-black">FM Lite</h1>
-        <p className="mt-3 text-zinc-400">
+        <h1 className="text-6xl font-black tracking-tight">FM Lite</h1>
+        <p className="mt-4 text-zinc-400">
           팀을 선택하고, 전술을 짜고, 8팀 토너먼트 우승에 도전하세요.
         </p>
       </div>

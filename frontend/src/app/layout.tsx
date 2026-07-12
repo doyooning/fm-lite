@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FM Lite — 감독의 방",
+  title: "FM Lite",
   description: "8팀 토너먼트에서 우승에 도전하는 라이트 축구 감독 시뮬레이션",
 };
 

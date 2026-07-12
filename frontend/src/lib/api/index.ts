@@ -25,6 +25,8 @@ export const matchesApi = {
   start: (matchId: number) => api<MatchProgress>('POST', `/matches/${matchId}/start`),
   choose: (matchId: number, eventId: number, choiceId: string) =>
     api<MatchProgress>('POST', `/matches/${matchId}/choices`, { eventId, choiceId }),
+  halftimeTactics: (matchId: number, tactic: Tactic) =>
+    api<MatchProgress>('POST', `/matches/${matchId}/halftime-tactics`, tactic),
   events: (matchId: number) => api<MatchProgress>('GET', `/matches/${matchId}/events`),
   result: (matchId: number) => api<MatchResult>('GET', `/matches/${matchId}/result`),
 };

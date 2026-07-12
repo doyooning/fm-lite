@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { saveGamesApi, teamsApi } from '@/lib/api';
-import { Card, ErrorBox, Spinner } from '@/components/ui';
+import { BackButton, Card, ErrorBox, Spinner } from '@/components/ui';
 import type { Player } from '@/types/api';
 
 const POSITIONS = ['GK', 'DF', 'MF', 'FW'] as const;
@@ -45,6 +45,7 @@ export default function SquadPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl p-6">
+      <BackButton fallbackHref={`/game/${saveGameId}`} />
       <h1 className="text-2xl font-bold">{teamName} 선수단</h1>
       <p className="mt-1 text-sm text-zinc-400">GK 2 · DF 6 · MF 6 · FW 4 — 경기마다 포메이션에 맞춰 베스트 XI가 자동 선발됩니다.</p>
 
@@ -82,7 +83,11 @@ export default function SquadPage() {
                       <div className="flex flex-wrap gap-1">
                         {p.traits.map((t) => (
                           <span key={t.code} title={t.description}
-                                className="cursor-help rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-300">
+                                className={`cursor-help rounded border px-1.5 py-0.5 text-xs ${
+                                  t.positive
+                                    ? 'border-sky-500/40 bg-sky-500/15 text-sky-300'
+                                    : 'border-red-500/40 bg-red-500/15 text-red-300'
+                                }`}>
                             {t.name}
                           </span>
                         ))}

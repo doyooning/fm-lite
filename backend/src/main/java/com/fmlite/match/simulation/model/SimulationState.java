@@ -19,6 +19,7 @@ public class SimulationState {
     private int awayScore = 0;
     private int seqCounter = 0;           // 다음 이벤트 seq
     private boolean waitingChoice = false;
+    private boolean halftimePrompted = false;   // 하프타임 전술변경 안내를 이미 띄웠는지
     private TeamSimState home;
     private TeamSimState away;
     private double domSumHome = 0;        // 점유율 계산용 (틱별 홈 지배력 합)
