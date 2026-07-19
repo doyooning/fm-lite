@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authApi, saveGamesApi, teamsApi } from '@/lib/api';
+import { saveGamesApi, teamsApi } from '@/lib/api';
 import { isLoggedIn, setSaveGameId } from '@/lib/auth';
 import { Button, Card, ErrorBox, Field, GradeBadge, Input, Spinner, StatBar } from '@/components/ui';
 import type { TeamDetail, TeamSummary } from '@/types/api';
@@ -22,8 +22,6 @@ export default function NewGamePage() {
       return;
     }
     teamsApi.list().then(setTeams).catch((e) => setError(e.message));
-    // 기본 감독 이름 = 가입 시 닉네임
-    authApi.me().then((u) => setManagerName(u.nickname)).catch(() => {});
   }, [router]);
 
   const pick = (teamId: number) =>

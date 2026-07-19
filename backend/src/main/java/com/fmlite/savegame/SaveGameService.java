@@ -7,6 +7,8 @@ import com.fmlite.match.Match;
 import com.fmlite.match.MatchRepository;
 import com.fmlite.match.MatchStatus;
 import com.fmlite.match.dto.TeamBrief;
+import com.fmlite.match.event.MatchEventRepository;
+import com.fmlite.match.result.MatchResultRepository;
 import com.fmlite.match.tactic.TacticRepository;
 import com.fmlite.savegame.dto.NextMatchResponse;
 import com.fmlite.savegame.dto.SaveGameResponse;
@@ -28,16 +30,25 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SaveGameService {
 
+    /** 계정당 최대 저장 게임 수 */
+    public static final int MAX_GAMES_PER_USER = 3;
+
     private final SaveGameRepository saveGameRepository;
     private final CompetitionRepository competitionRepository;
     private final MatchRepository matchRepository;
     private final TeamRepository teamRepository;
     private final TacticRepository tacticRepository;
+    private final MatchEventRepository matchEventRepository;
+    private final MatchResultRepository matchResultRepository;
 
     /** 새 게임 시작: SaveGame + Competition + 8강 대진 생성 (강팀 2팀은 반대 사이드 시드 배정) */
     @Transactional
     public SaveGameResponse create(UUID userId, Long teamId, String managerName) {
         // userId 는 인증된 JWT 에서 오므로 users 행이 항상 존재한다 (익명 자동생성 로직 제거).
+        if (saveGameRepository.countByUserId(userId) >= MAX_GAMES_PER_USER) {
+            throw BusinessException.conflict("GAME_LIMIT_REACHED",
+                    "게임은 최대 " + MAX_GAMES_PER_USER + "개까지 만들 수 있습니다. 기존 게임을 삭제해 주세요.");
+        }
         Team userTeam = teamRepository.findById(teamId)
                 .orElseThrow(() -> BusinessException.notFound("팀"));
 
@@ -90,6 +101,25 @@ public class SaveGameService {
         return saveGameRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(sg -> get(userId, sg.getId()))
                 .toList();
+    }
+
+    /** 저장 게임 삭제 (소유자만). FK 순서대로 자식(이벤트/결과/전술/경기/대회) 먼저 제거 */
+    @Transactional
+    public void delete(UUID userId, Long saveGameId) {
+        SaveGame saveGame = requireOwned(userId, saveGameId);
+        competitionRepository.findBySaveGameId(saveGameId).ifPresent(competition -> {
+            List<Match> matches = matchRepository
+                    .findByCompetitionIdOrderByRoundAscMatchNoAsc(competition.getId());
+            List<Long> matchIds = matches.stream().map(Match::getId).toList();
+            if (!matchIds.isEmpty()) {
+                matchEventRepository.deleteByMatchIdIn(matchIds);
+                matchResultRepository.deleteByMatchIdIn(matchIds);
+                tacticRepository.deleteByMatchIdIn(matchIds);
+            }
+            matchRepository.deleteAll(matches);
+            competitionRepository.delete(competition);
+        });
+        saveGameRepository.delete(saveGame);
     }
 
     /** 사용자 팀의 다음(미종료) 경기 */

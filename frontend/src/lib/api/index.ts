@@ -26,6 +26,7 @@ export const saveGamesApi = {
   get: (id: number) => api<SaveGame>('GET', `/save-games/${id}`),
   nextMatch: (id: number) => api<NextMatchResponse>('GET', `/save-games/${id}/next-match`),
   listMine: () => api<SaveGame[]>('GET', '/save-games'),
+  remove: (id: number) => api<{ message: string }>('DELETE', `/save-games/${id}`),
 };
 
 export const matchesApi = {

@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface SaveGameRepository extends JpaRepository<SaveGame, Long> {
 
     List<SaveGame> findByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    long countByUserId(UUID userId);
 }

@@ -8,7 +8,6 @@ import { Button, Card, ErrorBox, Field, Input } from '@/components/ui';
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nickname, setNickname] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -22,7 +21,7 @@ export default function SignupPage() {
     }
     setBusy(true);
     try {
-      await authApi.register(email, password, nickname || undefined);
+      await authApi.register(email, password);
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
@@ -66,10 +65,7 @@ export default function SignupPage() {
             <Input type="password" autoComplete="new-password" required value={password}
                    onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
           </Field>
-          <Field label="닉네임" hint="선택 · 비우면 '감독'">
-            <Input type="text" value={nickname} maxLength={30}
-                   onChange={(e) => setNickname(e.target.value)} placeholder="감독" />
-          </Field>
+          <p className="text-xs text-zinc-500">감독 이름은 새 게임을 만들 때 게임마다 정합니다.</p>
 
           {error && <ErrorBox message={error} />}
 

@@ -6,6 +6,7 @@ import com.fmlite.savegame.dto.SaveGameResponse;
 import com.fmlite.security.CurrentUserId;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -49,5 +51,12 @@ public class SaveGameController {
     @GetMapping("/save-games")
     public ApiResponse<List<SaveGameResponse>> listMine(@CurrentUserId UUID userId) {
         return ApiResponse.ok(saveGameService.listByUser(userId));
+    }
+
+    @DeleteMapping("/save-games/{saveGameId}")
+    public ApiResponse<Map<String, String>> delete(@CurrentUserId UUID userId,
+                                                   @PathVariable Long saveGameId) {
+        saveGameService.delete(userId, saveGameId);
+        return ApiResponse.ok(Map.of("message", "게임을 삭제했습니다."));
     }
 }

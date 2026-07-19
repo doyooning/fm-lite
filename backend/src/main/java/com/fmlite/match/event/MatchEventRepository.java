@@ -14,4 +14,6 @@ public interface MatchEventRepository extends JpaRepository<MatchEvent, Long> {
     Optional<MatchEvent> findFirstByMatchIdAndRequiresChoiceTrueAndSelectedChoiceIdIsNullOrderBySeqDesc(Long matchId);
 
     Optional<MatchEvent> findFirstByMatchIdOrderBySeqDesc(Long matchId);
+
+    void deleteByMatchIdIn(List<Long> matchIds);
 }

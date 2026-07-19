@@ -10,4 +10,6 @@ public interface MatchResultRepository extends JpaRepository<MatchResult, Long> 
     Optional<MatchResult> findByMatchId(Long matchId);
 
     List<MatchResult> findByMatchIdIn(List<Long> matchIds);
+
+    void deleteByMatchIdIn(List<Long> matchIds);
 }
