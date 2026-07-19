@@ -36,12 +36,12 @@ public class SaveGameService {
 
     /** 새 게임 시작: SaveGame + Competition + 8강 대진 생성 (강팀 2팀은 반대 사이드 시드 배정) */
     @Transactional
-    public SaveGameResponse create(UUID userId, Long teamId) {
+    public SaveGameResponse create(UUID userId, Long teamId, String managerName) {
         // userId 는 인증된 JWT 에서 오므로 users 행이 항상 존재한다 (익명 자동생성 로직 제거).
         Team userTeam = teamRepository.findById(teamId)
                 .orElseThrow(() -> BusinessException.notFound("팀"));
 
-        SaveGame saveGame = saveGameRepository.save(new SaveGame(userId, teamId));
+        SaveGame saveGame = saveGameRepository.save(new SaveGame(userId, teamId, managerName));
         Competition competition = competitionRepository.save(new Competition(saveGame.getId()));
 
         List<Long> slots = drawSlots();

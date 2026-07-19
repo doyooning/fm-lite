@@ -21,7 +21,8 @@ export const teamsApi = {
 };
 
 export const saveGamesApi = {
-  create: (teamId: number) => api<SaveGame>('POST', '/save-games', { teamId }),
+  create: (teamId: number, managerName: string) =>
+    api<SaveGame>('POST', '/save-games', { teamId, managerName }),
   get: (id: number) => api<SaveGame>('GET', `/save-games/${id}`),
   nextMatch: (id: number) => api<NextMatchResponse>('GET', `/save-games/${id}/next-match`),
   listMine: () => api<SaveGame[]>('GET', '/save-games'),

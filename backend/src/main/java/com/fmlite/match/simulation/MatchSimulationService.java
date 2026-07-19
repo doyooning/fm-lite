@@ -104,7 +104,8 @@ public class MatchSimulationService {
 
         List<MatchEventResponse> events = eventWriter.persist(match, state, List.of(
                 EventDraft.info(state.minuteNow(), MatchEventType.COACH_DECISION,
-                        eventGenerator.coachDecision(choiceService.labelOf(request.choiceId())))));
+                        eventGenerator.coachDecision(ctx.saveGame().getManagerName(),
+                                choiceService.labelOf(request.choiceId())))));
         return runAndPersist(match, events);
     }
 
@@ -175,7 +176,8 @@ public class MatchSimulationService {
 
         List<MatchEventResponse> events = eventWriter.persist(match, state, List.of(
                 EventDraft.info(state.minuteNow(), MatchEventType.COACH_DECISION,
-                        "하프타임 전술 변경: " + request.formation().getValue()
+                        ctx.saveGame().getManagerName() + " 감독의 하프타임 전술 변경: "
+                                + request.formation().getValue()
                                 + " · " + mentalityLabel(request.mentality().name()))));
         return runAndPersist(match, new ArrayList<>(events));
     }

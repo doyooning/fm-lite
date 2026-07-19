@@ -78,6 +78,7 @@ export interface SaveGame {
   id: number;
   team: TeamBrief;
   teamGrade: string;
+  managerName: string;
   status: 'IN_PROGRESS' | 'CHAMPION' | 'ELIMINATED';
   competitionId: number;
   currentRound: string;

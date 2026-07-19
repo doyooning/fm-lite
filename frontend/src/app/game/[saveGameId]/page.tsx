@@ -30,7 +30,9 @@ export default function GameHubPage() {
         <Card className="mb-6 border-amber-500/40 bg-amber-500/10 text-center">
           <p className="text-3xl">🏆</p>
           <h2 className="mt-1 text-xl font-bold text-amber-300">FM 챔피언스 컵 우승!</h2>
-          <p className="mt-1 text-sm text-zinc-300">{saveGame.team.name}의 감독으로 정상에 올랐습니다.</p>
+          <p className="mt-1 text-sm text-zinc-300">
+            {saveGame.managerName} 감독, {saveGame.team.name}와 함께 정상에 올랐습니다!
+          </p>
         </Card>
       )}
       {saveGame.status === 'ELIMINATED' && (

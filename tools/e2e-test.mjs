@@ -53,7 +53,8 @@ const byPos = players.reduce((a, p) => ((a[p.position] = (a[p.position] ?? 0) + 
 assert(byPos.GK === 2 && byPos.DF === 6 && byPos.MF === 6 && byPos.FW === 4, 'squad plan ' + JSON.stringify(byPos));
 console.log('✔ team detail + squad OK', JSON.stringify(byPos));
 
-const save = await api('POST', '/save-games', { teamId: myTeam.id });
+const save = await api('POST', '/save-games', { teamId: myTeam.id, managerName: '테스트감독' });
+assert(save.managerName === '테스트감독', 'manager name persisted, got ' + save.managerName);
 console.log(`✔ save game #${save.id}, competition #${save.competitionId}, round=${save.currentRound}`);
 
 let matchCount = 0;

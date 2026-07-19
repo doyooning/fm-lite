@@ -24,12 +24,15 @@ public class SaveGameController {
 
     private final SaveGameService saveGameService;
 
-    public record CreateSaveGameRequest(@NotNull Long teamId) {}
+    public record CreateSaveGameRequest(
+            @NotNull Long teamId,
+            @jakarta.validation.constraints.Size(max = 30, message = "감독 이름은 30자 이하여야 합니다.") String managerName
+    ) {}
 
     @PostMapping("/save-games")
     public ApiResponse<SaveGameResponse> create(@CurrentUserId UUID userId,
                                                 @Valid @RequestBody CreateSaveGameRequest request) {
-        return ApiResponse.ok(saveGameService.create(userId, request.teamId()));
+        return ApiResponse.ok(saveGameService.create(userId, request.teamId(), request.managerName()));
     }
 
     @GetMapping("/save-games/{saveGameId}")

@@ -56,8 +56,8 @@ public class MatchEventGenerator {
         return fill(pick(MISS_TEMPLATES, rng), team, player, null);
     }
 
-    public String coachDecision(String label) {
-        return "감독의 지시: [" + label + "] 선수들에게 새로운 지침이 전달됩니다.";
+    public String coachDecision(String managerName, String label) {
+        return managerName + " 감독의 지시: [" + label + "] 선수들에게 새로운 지침이 전달됩니다.";
     }
 
     public String shootoutStart() {

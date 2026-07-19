@@ -41,6 +41,8 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
           <Link href="/" className="text-sm font-black tracking-tight text-emerald-500">FM Lite</Link>
           {saveGame && (
             <div className="flex items-center gap-2 text-sm">
+              <span className="text-zinc-400">{saveGame.managerName} 감독</span>
+              <span className="text-zinc-700">·</span>
               <span className="font-semibold">{saveGame.team.name}</span>
               <GradeBadge grade={saveGame.teamGrade} label={saveGame.currentRoundLabel} />
             </div>
