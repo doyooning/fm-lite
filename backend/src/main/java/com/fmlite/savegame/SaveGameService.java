@@ -16,7 +16,9 @@ import com.fmlite.competition.Round;
 import com.fmlite.team.Team;
 import com.fmlite.team.TeamGrade;
 import com.fmlite.team.TeamRepository;
+import com.fmlite.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,11 +42,16 @@ public class SaveGameService {
     private final TacticRepository tacticRepository;
     private final MatchEventRepository matchEventRepository;
     private final MatchResultRepository matchResultRepository;
+    private final UserRepository userRepository;
 
     /** 새 게임 시작: SaveGame + Competition + 8강 대진 생성 (강팀 2팀은 반대 사이드 시드 배정) */
     @Transactional
     public SaveGameResponse create(UUID userId, Long teamId, String managerName) {
-        // userId 는 인증된 JWT 에서 오므로 users 행이 항상 존재한다 (익명 자동생성 로직 제거).
+        // 토큰의 계정이 DB 에 없으면(예: 계정 삭제/초기화) FK 오류 대신 재로그인을 유도한다.
+        if (!userRepository.existsById(userId)) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND",
+                    "계정 정보를 찾을 수 없습니다. 다시 로그인해 주세요.");
+        }
         if (saveGameRepository.countByUserId(userId) >= MAX_GAMES_PER_USER) {
             throw BusinessException.conflict("GAME_LIMIT_REACHED",
                     "게임은 최대 " + MAX_GAMES_PER_USER + "개까지 만들 수 있습니다. 기존 게임을 삭제해 주세요.");
