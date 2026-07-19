@@ -13,12 +13,12 @@ export class ApiError extends Error {
 }
 
 export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('fmlite.userId') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('fmlite.token') : null;
   const res = await fetch(BASE + path, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(userId ? { 'X-User-Id': userId } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -31,6 +31,14 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
   }
 
   if (!res.ok || !envelope?.success) {
+    // 401: 토큰 만료/무효 → 정리 후 로그인으로 유도 (auth 엔드포인트 자체 호출은 제외)
+    if (res.status === 401 && typeof window !== 'undefined' && !path.startsWith('/auth/')) {
+      localStorage.removeItem('fmlite.token');
+      localStorage.removeItem('fmlite.saveGameId');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
     throw new ApiError(
       envelope?.error?.code ?? 'UNKNOWN',
       envelope?.error?.message ?? `요청 실패 (${res.status})`,

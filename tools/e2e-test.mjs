@@ -1,15 +1,18 @@
-// FM Lite E2E 스모크 테스트: 새 게임 → 전술 → 경기(선택지 응답) → 토너먼트 완주
-// 실행: node tools/e2e-test.mjs [API_BASE]
+// FM Lite E2E 스모크 테스트: 로그인 → 새 게임 → 전술 → 경기(선택지 응답) → 토너먼트 완주
+// 실행: SB_DB_PW=<pw> node tools/e2e-test.mjs [API_BASE]
+import pkg from 'pg';
+const { Client } = pkg;
+
 const BASE = process.argv[2] ?? 'http://localhost:8080/api/v1';
 
-let userId = null;
+let token = null;
 
 async function api(method, path, body) {
   const res = await fetch(BASE + path, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(userId ? { 'X-User-Id': userId } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -24,9 +27,18 @@ function assert(cond, msg) {
   if (!cond) throw new Error('ASSERT FAIL: ' + msg);
 }
 
-const user = await api('POST', '/users', { nickname: 'E2E감독' });
-userId = user.id;
-console.log('✔ user created:', userId);
+// 인증: 가입 → (DB에서 토큰) 인증 → 로그인
+const email = `e2e_flow_${Date.now()}@example.com`;
+const password = 'Passw0rd!';
+await api('POST', '/auth/register', { email, password, nickname: 'E2E감독' });
+const pg = new Client({ host: 'aws-0-ap-southeast-2.pooler.supabase.com', port: 5432, user: 'postgres.klkjooqskbmrskbjowrb', password: process.env.SB_DB_PW, database: 'postgres', ssl: { rejectUnauthorized: false } });
+await pg.connect();
+const tk = await pg.query(`select t.token from email_verification_tokens t join users u on u.id=t.user_id where lower(u.email)=lower($1) order by t.created_at desc limit 1`, [email]);
+await pg.end();
+await api('POST', '/auth/verify', { token: tk.rows[0].token });
+const auth = await api('POST', '/auth/login', { email, password });
+token = auth.token;
+console.log('✔ authenticated:', email);
 
 const teams = await api('GET', '/teams');
 assert(teams.length === 8, 'teams=8, got ' + teams.length);
@@ -59,7 +71,7 @@ while (true) {
   console.log(`\n=== ${m.roundLabel} : ${m.homeTeam.name} vs ${m.awayTeam.name} (match #${m.matchId}) ===`);
 
   // 전술 설정 전 start 시도 → 409 기대
-  const early = await fetch(BASE + `/matches/${m.matchId}/start`, { method: 'POST', headers: { 'X-User-Id': userId } });
+  const early = await fetch(BASE + `/matches/${m.matchId}/start`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
   assert(early.status === 409, 'start before tactic should 409, got ' + early.status);
 
   const analysis = await api('GET', `/matches/${m.matchId}/opponent-analysis`);
@@ -88,7 +100,7 @@ while (true) {
 
   // 잘못된 라인업(10명)은 거부되어야 함
   const bad = await fetch(BASE + `/matches/${m.matchId}/tactics/me`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+    method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ formation: '4-3-3', mentality: 'BALANCED', pressing: 'HIGH', lineHeight: 'NORMAL', attackStyle: 'WIDE', lineup: customLineup.slice(0, 10) }),
   });
   assert(bad.status === 400, 'invalid lineup should 400, got ' + bad.status);
@@ -152,7 +164,7 @@ const finalSave = await api('GET', `/save-games/${save.id}`);
 console.log(`\n최종: 사용자 ${matchCount}경기 진행, saveGame=${finalSave.status}, 우승팀 ID=${bracket.winnerTeamId}`);
 assert(['CHAMPION', 'ELIMINATED'].includes(finalSave.status), 'final status');
 
-const list = await api('GET', `/users/${userId}/save-games`);
+const list = await api('GET', '/save-games');
 assert(list.length === 1, 'save game list');
 
 console.log('\n✅ E2E PASS');

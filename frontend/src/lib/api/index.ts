@@ -1,8 +1,18 @@
 import { api } from '@/lib/api/client';
 import type {
-  Bracket, MatchInfo, MatchProgress, MatchResult, NextMatchResponse,
-  OpponentAnalysis, Player, SaveGame, Tactic, TacticResponse, TeamDetail, TeamSummary,
+  AuthResponse, Bracket, MatchInfo, MatchProgress, MatchResult, NextMatchResponse,
+  OpponentAnalysis, Player, SaveGame, Tactic, TacticResponse, TeamDetail, TeamSummary, User,
 } from '@/types/api';
+
+export const authApi = {
+  register: (email: string, password: string, nickname?: string) =>
+    api<{ message: string }>('POST', '/auth/register', { email, password, nickname }),
+  login: (email: string, password: string) =>
+    api<AuthResponse>('POST', '/auth/login', { email, password }),
+  verify: (token: string) => api<{ message: string }>('POST', '/auth/verify', { token }),
+  resend: (email: string) => api<{ message: string }>('POST', '/auth/resend-verification', { email }),
+  me: () => api<User>('GET', '/auth/me'),
+};
 
 export const teamsApi = {
   list: () => api<TeamSummary[]>('GET', '/teams'),
@@ -14,6 +24,7 @@ export const saveGamesApi = {
   create: (teamId: number) => api<SaveGame>('POST', '/save-games', { teamId }),
   get: (id: number) => api<SaveGame>('GET', `/save-games/${id}`),
   nextMatch: (id: number) => api<NextMatchResponse>('GET', `/save-games/${id}/next-match`),
+  listMine: () => api<SaveGame[]>('GET', '/save-games'),
 };
 
 export const matchesApi = {

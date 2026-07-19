@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { saveGamesApi } from '@/lib/api';
-import { getSaveGameId } from '@/lib/storage';
-import { Card, GradeBadge, LinkButton } from '@/components/ui';
-import type { SaveGame } from '@/types/api';
+import { fetchMe, getSaveGameId, isLoggedIn, logout } from '@/lib/auth';
+import { Button, Card, GradeBadge, LinkButton, Spinner } from '@/components/ui';
+import type { SaveGame, User } from '@/types/api';
 
 const statusLabel: Record<SaveGame['status'], string> = {
   IN_PROGRESS: '진행 중',
@@ -13,12 +14,34 @@ const statusLabel: Record<SaveGame['status'], string> = {
 };
 
 export default function HomePage() {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [saveGame, setSaveGame] = useState<SaveGame | null>(null);
 
   useEffect(() => {
-    const id = getSaveGameId();
-    if (id) saveGamesApi.get(id).then(setSaveGame).catch(() => setSaveGame(null));
-  }, []);
+    if (!isLoggedIn()) {
+      router.replace('/login');
+      return;
+    }
+    fetchMe().then((me) => {
+      if (!me) {
+        router.replace('/login');
+        return;
+      }
+      setUser(me);
+      setReady(true);
+      const id = getSaveGameId();
+      if (id) saveGamesApi.get(id).then(setSaveGame).catch(() => setSaveGame(null));
+    });
+  }, [router]);
+
+  const signOut = () => {
+    logout();
+    router.replace('/login');
+  };
+
+  if (!ready) return <Spinner text="불러오는 중..." />;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center gap-8 p-6">
@@ -27,6 +50,12 @@ export default function HomePage() {
         <p className="mt-4 text-zinc-400">
           팀을 선택하고, 전술을 짜고, 8팀 토너먼트 우승에 도전하세요.
         </p>
+        {user && (
+          <p className="mt-3 text-sm text-zinc-500">
+            {user.nickname} 감독 ({user.email}) ·{' '}
+            <button onClick={signOut} className="text-zinc-400 hover:text-zinc-200 hover:underline">로그아웃</button>
+          </p>
+        )}
       </div>
 
       <div className="flex w-full flex-col gap-3">

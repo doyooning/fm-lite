@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveGamesApi, teamsApi } from '@/lib/api';
-import { ensureUser, resetUser, setSaveGameId } from '@/lib/storage';
-import { ApiError } from '@/lib/api/client';
+import { isLoggedIn, setSaveGameId } from '@/lib/auth';
 import { Button, Card, ErrorBox, GradeBadge, Spinner, StatBar } from '@/components/ui';
-import type { SaveGame, TeamDetail, TeamSummary } from '@/types/api';
+import type { TeamDetail, TeamSummary } from '@/types/api';
 
 export default function NewGamePage() {
   const router = useRouter();
@@ -16,8 +15,12 @@ export default function NewGamePage() {
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
+    if (!isLoggedIn()) {
+      router.replace('/login');
+      return;
+    }
     teamsApi.list().then(setTeams).catch((e) => setError(e.message));
-  }, []);
+  }, [router]);
 
   const pick = (teamId: number) =>
     teamsApi.detail(teamId).then(setSelected).catch((e) => setError(e.message));
@@ -26,19 +29,7 @@ export default function NewGamePage() {
     if (!selected) return;
     setStarting(true);
     try {
-      await ensureUser();
-      let save: SaveGame;
-      try {
-        save = await saveGamesApi.create(selected.id);
-      } catch (e) {
-        // 보관된 익명 id 가 서버에 없으면(예: DB 초기화) 재발급 후 1회 재시도
-        if (e instanceof ApiError && (e.status === 404 || e.code === 'NOT_FOUND')) {
-          await resetUser();
-          save = await saveGamesApi.create(selected.id);
-        } else {
-          throw e;
-        }
-      }
+      const save = await saveGamesApi.create(selected.id);
       setSaveGameId(save.id);
       router.push(`/game/${save.id}`);
     } catch (e) {

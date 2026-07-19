@@ -61,7 +61,9 @@
 | 중간 | **부상/징계** | MatchEvent에 INJURY/CARD 타입 추가, save_game_players에 상태 기록 |
 | 중간 | **선수 성장** | 경기 출전·평점 기반 능력치 상승 (save_game_players 위에 구현) |
 | 중간 | **시즌 모드 (리그전)** | Competition.type=LEAGUE, 승점 테이블 추가. Match 구조는 재사용 |
-| 중간 | **인증 (Spring Security + JWT)** | users에 email/password 추가, X-User-Id → Bearer 토큰 교체 |
+| ✅ 완료 | **인증 (Spring Security + JWT)** | 이메일/비밀번호 로그인 + 이메일 인증(Gmail SMTP), X-User-Id → Bearer 토큰 교체 완료. 로그인 필수 |
+| 높음 | **소셜 로그인 (OAuth2)** | 네이버/카카오/깃허브 (자격증명 준비됨). 인증 위에 provider 추가 |
+| 낮음 | **비밀번호 재설정** | 인증 토큰 구조 재사용 (email_verification_tokens 패턴) |
 | 낮음 | **훈련 시스템** | 경기 사이 훈련 선택 → 컨디션/능력치 버프 |
 | 낮음 | **이적 시장** | 대회 사이 선수 영입 (예산 개념 필요) |
 | 낮음 | **관리자 데이터 관리** | 팀/선수/밸런스 상수 CRUD 어드민 (Next.js /admin 라우트) |

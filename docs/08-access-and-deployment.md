@@ -3,6 +3,22 @@
 프론트는 Vercel, 백엔드는 로컬로 배포한 현재 구조의 동작 조건과,
 이후 "어디서나 접속 가능"하게 전환하는 방법을 정리한다.
 
+## 로그인 & 이메일 인증의 도달성 (중요)
+
+로그인 필수 + 이메일 인증(가입 시 링크 발송)이 도입됐다. 인증 링크는 백엔드 환경변수
+`FRONTEND_BASE_URL`을 기준으로 `<FRONTEND_BASE_URL>/verify?token=...` 형태로 만들어지고,
+그 `/verify` 페이지가 다시 백엔드(`NEXT_PUBLIC_API_BASE_URL`)의 `POST /auth/verify`를 호출한다.
+
+- 현재는 백엔드가 로컬(localhost:8080)이므로 **인증 완료도 백엔드를 켠 PC의 브라우저에서만** 가능
+  (앱 전체와 동일 제약). Gmail SMTP 미설정 시에도 백엔드 로그에 인증 링크가 출력되어 개발 테스트는 가능.
+- 배포/실사용 전환 시 조정할 환경변수 (코드 수정 불필요):
+  - 백엔드 `env/.env`: `FRONTEND_BASE_URL`(인증 링크 도메인), `FRONTEND_ORIGIN`(CORS),
+    `MAIL_USERNAME`/`MAIL_PASSWORD`/`MAIL_FROM`(Gmail SMTP), `JWT_SECRET`
+  - 프론트(Vercel): `NEXT_PUBLIC_API_BASE_URL`(백엔드 공개 주소)
+- **백엔드 배포는 추후 Cloudtype 예정.** Cloudtype에 배포해 고정 HTTPS 주소가 생기면
+  위 `NEXT_PUBLIC_API_BASE_URL`을 그 주소로 바꾸고 재배포하면, 어느 기기에서든 가입·인증·플레이가
+  가능해진다. (`FRONTEND_BASE_URL`은 프론트 도메인 = Vercel 주소 그대로 유지.)
+
 ## 현재 구조 (as-is)
 
 ```

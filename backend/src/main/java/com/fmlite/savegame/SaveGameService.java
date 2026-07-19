@@ -14,8 +14,6 @@ import com.fmlite.competition.Round;
 import com.fmlite.team.Team;
 import com.fmlite.team.TeamGrade;
 import com.fmlite.team.TeamRepository;
-import com.fmlite.user.User;
-import com.fmlite.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,16 +33,11 @@ public class SaveGameService {
     private final MatchRepository matchRepository;
     private final TeamRepository teamRepository;
     private final TacticRepository tacticRepository;
-    private final UserRepository userRepository;
 
     /** 새 게임 시작: SaveGame + Competition + 8강 대진 생성 (강팀 2팀은 반대 사이드 시드 배정) */
     @Transactional
     public SaveGameResponse create(UUID userId, Long teamId) {
-        // 익명 사용자: 클라이언트가 보관한 id 가 DB 초기화 등으로 없으면 그 id 로 자동 생성(자기치유).
-        // save_games.user_id FK 를 만족시키려면 SaveGame INSERT 전에 users 행이 확정돼야 하므로 flush.
-        if (!userRepository.existsById(userId)) {
-            userRepository.saveAndFlush(new User(userId, "감독"));
-        }
+        // userId 는 인증된 JWT 에서 오므로 users 행이 항상 존재한다 (익명 자동생성 로직 제거).
         Team userTeam = teamRepository.findById(teamId)
                 .orElseThrow(() -> BusinessException.notFound("팀"));
 
@@ -83,9 +76,8 @@ public class SaveGameService {
     }
 
     @Transactional(readOnly = true)
-    public SaveGameResponse get(Long saveGameId) {
-        SaveGame saveGame = saveGameRepository.findById(saveGameId)
-                .orElseThrow(() -> BusinessException.notFound("저장 게임"));
+    public SaveGameResponse get(UUID userId, Long saveGameId) {
+        SaveGame saveGame = requireOwned(userId, saveGameId);
         Team team = teamRepository.findById(saveGame.getTeamId())
                 .orElseThrow(() -> BusinessException.notFound("팀"));
         Competition competition = competitionRepository.findBySaveGameId(saveGameId)
@@ -96,15 +88,14 @@ public class SaveGameService {
     @Transactional(readOnly = true)
     public List<SaveGameResponse> listByUser(UUID userId) {
         return saveGameRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(sg -> get(sg.getId()))
+                .map(sg -> get(userId, sg.getId()))
                 .toList();
     }
 
     /** 사용자 팀의 다음(미종료) 경기 */
     @Transactional(readOnly = true)
-    public NextMatchResponse nextMatch(Long saveGameId) {
-        SaveGame saveGame = saveGameRepository.findById(saveGameId)
-                .orElseThrow(() -> BusinessException.notFound("저장 게임"));
+    public NextMatchResponse nextMatch(UUID userId, Long saveGameId) {
+        SaveGame saveGame = requireOwned(userId, saveGameId);
         Competition competition = competitionRepository.findBySaveGameId(saveGameId)
                 .orElseThrow(() -> BusinessException.notFound("대회"));
 
@@ -125,5 +116,16 @@ public class SaveGameService {
     private TeamBrief brief(Long teamId) {
         return teamRepository.findById(teamId).map(TeamBrief::from)
                 .orElse(new TeamBrief(teamId, "팀 " + teamId, "?"));
+    }
+
+    /** 저장 게임 조회 + 소유권 검증 (남의 게임이면 403) */
+    private SaveGame requireOwned(UUID userId, Long saveGameId) {
+        SaveGame saveGame = saveGameRepository.findById(saveGameId)
+                .orElseThrow(() -> BusinessException.notFound("저장 게임"));
+        if (!saveGame.getUserId().equals(userId)) {
+            throw new BusinessException(org.springframework.http.HttpStatus.FORBIDDEN,
+                    "FORBIDDEN", "이 저장 게임에 대한 권한이 없습니다.");
+        }
+        return saveGame;
     }
 }

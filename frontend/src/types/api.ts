@@ -8,7 +8,14 @@ export interface ApiEnvelope<T> {
 
 export interface User {
   id: string;
+  email: string | null;
   nickname: string;
+  emailVerified: boolean;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
 }
 
 export interface TeamSummary {

@@ -1,20 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { saveGamesApi } from '@/lib/api';
+import { isLoggedIn, logout } from '@/lib/auth';
 import { GradeBadge } from '@/components/ui';
 import type { SaveGame } from '@/types/api';
 
 export default function GameLayout({ children }: { children: React.ReactNode }) {
   const { saveGameId } = useParams<{ saveGameId: string }>();
   const pathname = usePathname();
+  const router = useRouter();
   const [saveGame, setSaveGame] = useState<SaveGame | null>(null);
 
   useEffect(() => {
+    if (!isLoggedIn()) {
+      router.replace('/login');
+      return;
+    }
     saveGamesApi.get(Number(saveGameId)).then(setSaveGame).catch(() => {});
-  }, [saveGameId, pathname]);
+  }, [saveGameId, pathname, router]);
+
+  const signOut = () => {
+    logout();
+    router.replace('/login');
+  };
 
   const base = `/game/${saveGameId}`;
   const nav = [
@@ -34,7 +45,7 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
               <GradeBadge grade={saveGame.teamGrade} label={saveGame.currentRoundLabel} />
             </div>
           )}
-          <nav className="flex gap-1 text-sm">
+          <nav className="flex items-center gap-1 text-sm">
             {nav.map((n) => (
               <Link
                 key={n.href}
@@ -46,6 +57,10 @@ export default function GameLayout({ children }: { children: React.ReactNode }) 
                 {n.label}
               </Link>
             ))}
+            <button onClick={signOut}
+                    className="ml-1 rounded-md px-2.5 py-1 text-zinc-500 transition hover:text-zinc-300">
+              로그아웃
+            </button>
           </nav>
         </div>
       </header>

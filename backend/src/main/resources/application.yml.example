@@ -8,6 +8,13 @@
 #   SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres
 #   SPRING_DATASOURCE_USERNAME=postgres.<project-ref>
 #   SPRING_DATASOURCE_PASSWORD=<db-password>
+#   FRONTEND_ORIGIN=http://localhost:3000,https://<vercel-domain>
+#   # 인증/메일
+#   MAIL_USERNAME=<gmail-address>
+#   MAIL_PASSWORD=<gmail-app-password>       # Gmail 2단계인증 후 발급한 앱 비밀번호
+#   MAIL_FROM=FM Lite <your@gmail.com>
+#   JWT_SECRET=<32바이트 이상 랜덤 문자열>
+#   FRONTEND_BASE_URL=https://<vercel-domain>  # 인증 링크 도메인 (로컬은 http://localhost:3000)
 
 spring:
   application:
@@ -28,10 +35,27 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 
 app:
   cors:
     allowed-origins: ${FRONTEND_ORIGIN:http://localhost:3000}
+  jwt:
+    secret: ${JWT_SECRET:dev-only-insecure-secret-change-me-0123456789abcdef}
+    expiration-hours: ${JWT_EXP_HOURS:168}
+  mail:
+    from: ${MAIL_FROM:FM Lite <no-reply@fm-lite.local>}
+  verification:
+    expiry-hours: ${VERIFY_EXP_HOURS:24}
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:https://fm-lite-gamma.vercel.app}
 
 server:
   port: ${PORT:8080}
