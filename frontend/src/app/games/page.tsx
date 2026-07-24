@@ -59,7 +59,8 @@ export default function GamesPage() {
       <div className="mb-5 flex items-center justify-between">
         <Link href="/" className="text-lg font-black tracking-tight text-emerald-500">FM Lite</Link>
         <span className="text-sm text-zinc-500">
-          {user?.email} ·{' '}
+          <Link href="/profile" className="text-zinc-300 hover:text-emerald-400 hover:underline">프로필</Link>
+          {' · '}{user?.email}{' · '}
           <button onClick={signOut} className="text-zinc-400 hover:text-zinc-200 hover:underline">로그아웃</button>
         </span>
       </div>

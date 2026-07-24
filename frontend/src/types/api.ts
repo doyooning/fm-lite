@@ -18,6 +18,39 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface AchievementItem {
+  code: string;
+  label: string;
+  description: string;
+  icon: string;
+  achieved: boolean;
+  achievedAt: string | null;
+}
+
+export interface Profile {
+  email: string;
+  joinedAt: string;
+  championships: number;
+  games: { total: number; inProgress: number; champion: number; eliminated: number };
+  achievements: AchievementItem[];
+}
+
+export interface OpponentTactic {
+  teamId: number;
+  teamName: string;
+  formation: string;
+  mentality: string;
+  mentalityLabel: string;
+  pressing: string;
+  pressingLabel: string;
+  lineHeight: string;
+  lineHeightLabel: string;
+  attackStyle: string;
+  attackStyleLabel: string;
+  live: boolean;
+  recentChanges: string[];
+}
+
 export interface TeamSummary {
   id: number;
   name: string;

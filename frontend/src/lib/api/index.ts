@@ -1,8 +1,13 @@
 import { api } from '@/lib/api/client';
 import type {
   AuthResponse, Bracket, MatchInfo, MatchProgress, MatchResult, NextMatchResponse,
-  OpponentAnalysis, Player, SaveGame, Tactic, TacticResponse, TeamDetail, TeamSummary, User,
+  OpponentAnalysis, OpponentTactic, Player, Profile, SaveGame, Tactic, TacticResponse,
+  TeamDetail, TeamSummary, User,
 } from '@/types/api';
+
+export const profileApi = {
+  me: () => api<Profile>('GET', '/profile'),
+};
 
 export const authApi = {
   register: (email: string, password: string, nickname?: string) =>
@@ -32,6 +37,7 @@ export const saveGamesApi = {
 export const matchesApi = {
   info: (matchId: number) => api<MatchInfo>('GET', `/matches/${matchId}`),
   opponentAnalysis: (matchId: number) => api<OpponentAnalysis>('GET', `/matches/${matchId}/opponent-analysis`),
+  opponentTactic: (matchId: number) => api<OpponentTactic>('GET', `/matches/${matchId}/opponent-tactic`),
   getMyTactic: (matchId: number) => api<TacticResponse>('GET', `/matches/${matchId}/tactics/me`),
   saveMyTactic: (matchId: number, tactic: Tactic) =>
     api<TacticResponse>('PUT', `/matches/${matchId}/tactics/me`, tactic),

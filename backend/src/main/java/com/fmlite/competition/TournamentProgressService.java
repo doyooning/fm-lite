@@ -31,6 +31,7 @@ public class TournamentProgressService {
     private final MatchResultRepository matchResultRepository;
     private final SaveGameRepository saveGameRepository;
     private final AiMatchRunner aiMatchRunner;
+    private final com.fmlite.profile.ProfileService profileService;
 
     @Transactional
     public void progress(Long competitionId) {
@@ -60,8 +61,12 @@ public class TournamentProgressService {
                 Long champion = winners.get(0);
                 competition.finish(champion);
                 if (saveGame.getStatus() == SaveGameStatus.IN_PROGRESS) {
-                    saveGame.finish(champion.equals(saveGame.getTeamId())
-                            ? SaveGameStatus.CHAMPION : SaveGameStatus.ELIMINATED);
+                    boolean userWon = champion.equals(saveGame.getTeamId());
+                    saveGame.finish(userWon ? SaveGameStatus.CHAMPION : SaveGameStatus.ELIMINATED);
+                    if (userWon) {
+                        // 통산 우승 횟수 증가 + 업적 부여
+                        profileService.onChampionship(saveGame.getUserId(), saveGame, competitionId);
+                    }
                 }
                 return;
             }

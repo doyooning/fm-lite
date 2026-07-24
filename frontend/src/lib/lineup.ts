@@ -11,6 +11,34 @@ export const FORMATION_SLOTS: Record<Formation, Record<Pos, number>> = {
   '3-5-2': { GK: 1, DF: 3, MF: 5, FW: 2 },
 };
 
+/**
+ * 피치 배치용 라인 구성 (위=공격 → 아래=골키퍼).
+ * 같은 포지션이라도 시각적으로 나눠 배치하기 위해 라인 단위로 정의한다.
+ * (예: 4-2-3-1 의 MF 5명 = 공격형 3 + 수비형 2)
+ */
+export const FORMATION_ROWS: Record<Formation, { pos: Pos; count: number }[]> = {
+  '4-3-3': [
+    { pos: 'FW', count: 3 },
+    { pos: 'MF', count: 3 },
+    { pos: 'DF', count: 4 },
+    { pos: 'GK', count: 1 },
+  ],
+  '4-2-3-1': [
+    { pos: 'FW', count: 1 },
+    { pos: 'MF', count: 3 },
+    { pos: 'MF', count: 2 },
+    { pos: 'DF', count: 4 },
+    { pos: 'GK', count: 1 },
+  ],
+  '3-5-2': [
+    { pos: 'FW', count: 2 },
+    { pos: 'MF', count: 3 },
+    { pos: 'MF', count: 2 },
+    { pos: 'DF', count: 3 },
+    { pos: 'GK', count: 1 },
+  ],
+};
+
 /** 포메이션 기준 베스트 XI (포지션별 종합치 상위 N) — 백엔드 LineupSelector.select 와 동일 규칙 */
 export function bestEleven(squad: Player[], formation: Formation): number[] {
   const slots = FORMATION_SLOTS[formation];

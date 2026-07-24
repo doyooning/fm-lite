@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import type { Formation, Player, Tactic } from '@/types/api';
 import {
-  bestEleven, FORMATION_SLOTS, POSITION_LABEL, POSITION_ORDER, type Pos,
+  bestEleven, FORMATION_ROWS, POSITION_LABEL, POSITION_ORDER, type Pos,
 } from '@/lib/lineup';
 
 const FORMATIONS: Formation[] = ['4-3-3', '4-2-3-1', '3-5-2'];
@@ -35,6 +35,17 @@ export default function TacticForm({
 }) {
   const lineup = value.lineup ?? bestEleven(squad, value.formation);
   const byId = useMemo(() => new Map(squad.map((p) => [p.id, p])), [squad]);
+
+  // 피치 라인 구성과, 같은 포지션이 여러 라인에 나뉠 때의 시작 인덱스
+  const rows = FORMATION_ROWS[value.formation];
+  const rowOffsets = useMemo(() => {
+    const seen: Partial<Record<Pos, number>> = {};
+    return rows.map((r) => {
+      const start = seen[r.pos] ?? 0;
+      seen[r.pos] = start + r.count;
+      return start;
+    });
+  }, [rows]);
 
   const changeFormation = (formation: Formation) => {
     // 포메이션이 바뀌면 포지션 인원이 달라지므로 베스트 XI 로 재설정
@@ -113,39 +124,48 @@ export default function TacticForm({
             베스트 XI 자동
           </button>
         </div>
-        <div className="mt-2 flex flex-col gap-2">
-          {POSITION_ORDER.map((pos) => {
-            const count = FORMATION_SLOTS[value.formation][pos];
-            const selected = selectedByPos(pos);
-            const options = squad.filter((p) => p.position === pos).sort((a, b) => b.overall - a.overall);
-            return (
-              <div key={pos} className="flex items-start gap-2">
-                <span className="mt-2 w-8 shrink-0 text-xs font-semibold text-zinc-500">{POSITION_LABEL[pos].slice(0, 2)}</span>
-                <div className="grid flex-1 gap-1.5 sm:grid-cols-2">
-                  {Array.from({ length: count }).map((_, i) => {
-                    const selId = selected[i];
+        {/* 포메이션대로 배치된 피치 뷰 (위=공격, 아래=골키퍼). 각 슬롯에서 선수 교체 */}
+        <div className="mt-2 rounded-xl border border-emerald-900/60 bg-gradient-to-b from-emerald-950 to-emerald-900/40 p-3">
+          <div className="flex flex-col gap-2.5">
+            {rows.map((row, rowIdx) => {
+              const selected = selectedByPos(row.pos);
+              const options = squad
+                .filter((p) => p.position === row.pos)
+                .sort((a, b) => b.overall - a.overall);
+              return (
+                <div key={rowIdx} className="flex justify-center gap-2">
+                  {Array.from({ length: row.count }).map((_, i) => {
+                    const slotIndex = rowOffsets[rowIdx] + i;
+                    const selId = selected[slotIndex];
+                    const player = selId != null ? byId.get(selId) : undefined;
                     return (
-                      <select
-                        key={i}
-                        value={selId ?? ''}
-                        onChange={(e) => swapSlot(pos, i, Number(e.target.value))}
-                        className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-100 focus:border-emerald-500 focus:outline-none"
-                      >
-                        {options.map((p) => {
-                          const usedElsewhere = selected.includes(p.id) && p.id !== selId;
-                          return (
-                            <option key={p.id} value={p.id} disabled={usedElsewhere}>
-                              {p.name} ({p.overall}){usedElsewhere ? ' · 선발중' : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
+                      <div key={i} className="w-full max-w-[124px] min-w-0">
+                        <select
+                          value={selId ?? ''}
+                          onChange={(e) => swapSlot(row.pos, slotIndex, Number(e.target.value))}
+                          title={player ? `${player.name} (${player.overall})` : ''}
+                          className="w-full truncate rounded-lg border border-emerald-600/50 bg-zinc-900/90 px-1 py-1.5 text-center text-xs font-medium text-zinc-100 focus:border-emerald-400 focus:outline-none"
+                        >
+                          {options.map((p) => {
+                            const usedElsewhere = selected.includes(p.id) && p.id !== selId;
+                            return (
+                              <option key={p.id} value={p.id} disabled={usedElsewhere}>
+                                {p.name} ({p.overall}){usedElsewhere ? ' · 선발중' : ''}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <p className="mt-0.5 text-center text-[10px] text-emerald-300/70">
+                          {POSITION_LABEL[row.pos].slice(0, 2)}
+                          {player ? ` · ${player.overall}` : ''}
+                        </p>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

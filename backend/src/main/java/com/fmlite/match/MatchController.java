@@ -7,6 +7,7 @@ import com.fmlite.match.dto.MatchInfoResponse;
 import com.fmlite.match.dto.MatchProgressResponse;
 import com.fmlite.match.dto.MatchResultResponse;
 import com.fmlite.match.dto.OpponentAnalysisResponse;
+import com.fmlite.match.dto.OpponentTacticResponse;
 import com.fmlite.match.dto.TacticRequest;
 import com.fmlite.match.dto.TacticResponse;
 import com.fmlite.match.simulation.MatchSimulationService;
@@ -45,6 +46,13 @@ public class MatchController {
     public ApiResponse<OpponentAnalysisResponse> opponentAnalysis(@PathVariable Long matchId,
                                                                   @CurrentUserId UUID userId) {
         return ApiResponse.ok(opponentAnalysisService.analyze(matchId, userId));
+    }
+
+    /** 경기 중 상대 전술 열람 (AI 변경 반영) */
+    @GetMapping("/opponent-tactic")
+    public ApiResponse<OpponentTacticResponse> opponentTactic(@PathVariable Long matchId,
+                                                              @CurrentUserId UUID userId) {
+        return ApiResponse.ok(matchService.getOpponentTactic(matchId, userId));
     }
 
     @GetMapping("/tactics/me")

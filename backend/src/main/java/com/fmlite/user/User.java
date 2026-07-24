@@ -32,6 +32,10 @@ public class User {
     @Column(nullable = false)
     private String nickname;
 
+    /** 통산 우승 횟수 (게임을 삭제해도 유지) */
+    @Column(nullable = false)
+    private int championships;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -55,6 +59,11 @@ public class User {
 
     public void verifyEmail() {
         this.emailVerified = true;
+        this.updatedAt = Instant.now();
+    }
+
+    public void addChampionship() {
+        this.championships++;
         this.updatedAt = Instant.now();
     }
 }

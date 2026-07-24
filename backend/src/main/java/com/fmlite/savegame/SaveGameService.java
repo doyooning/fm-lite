@@ -43,6 +43,7 @@ public class SaveGameService {
     private final MatchEventRepository matchEventRepository;
     private final MatchResultRepository matchResultRepository;
     private final UserRepository userRepository;
+    private final com.fmlite.profile.ProfileService profileService;
 
     /** 새 게임 시작: SaveGame + Competition + 8강 대진 생성 (강팀 2팀은 반대 사이드 시드 배정) */
     @Transactional
@@ -69,6 +70,7 @@ public class SaveGameService {
             boolean userMatch = home.equals(teamId) || away.equals(teamId);
             matchRepository.save(new Match(competition.getId(), Round.QF, i + 1, home, away, userMatch));
         }
+        profileService.onGameCreated(userId);
         return SaveGameResponse.of(saveGame, userTeam, competition);
     }
 

@@ -6,7 +6,7 @@ import { matchesApi, teamsApi } from '@/lib/api';
 import { Card, ErrorBox, Spinner } from '@/components/ui';
 import TacticForm from '@/components/tactics/TacticForm';
 import { isValidLineup } from '@/lib/lineup';
-import type { MatchEvent, MatchInfo, MatchStatus, Player, Tactic } from '@/types/api';
+import type { MatchEvent, MatchInfo, MatchStatus, OpponentTactic, Player, Tactic } from '@/types/api';
 
 const REVEAL_INTERVAL_MS = 750;
 
@@ -41,6 +41,9 @@ export default function MatchLivePage() {
   const [squad, setSquad] = useState<Player[]>([]);
   const [htTactic, setHtTactic] = useState<Tactic | null>(null);
   const [submittingHt, setSubmittingHt] = useState(false);
+  const [oppTactic, setOppTactic] = useState<OpponentTactic | null>(null);
+  const [showOpp, setShowOpp] = useState(false);
+  const [loadingOpp, setLoadingOpp] = useState(false);
   const [error, setError] = useState('');
   const didInit = useRef(false);
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -120,6 +123,20 @@ export default function MatchLivePage() {
     }
   }, [mid, pendingChoice, choosing]);
 
+  /** 상대 전술 보기 토글 — 열 때마다 최신 상태를 다시 불러온다(AI 가 경기 중 바꿈) */
+  const toggleOpponent = useCallback(async () => {
+    if (showOpp) { setShowOpp(false); return; }
+    setLoadingOpp(true);
+    try {
+      setOppTactic(await matchesApi.opponentTactic(mid));
+      setShowOpp(true);
+    } catch {
+      /* 표시만 실패 — 경기 진행에는 영향 없음 */
+    } finally {
+      setLoadingOpp(false);
+    }
+  }, [mid, showOpp]);
+
   const submitHalftime = useCallback(async () => {
     if (!htTactic || submittingHt) return;
     if (!isValidLineup(htTactic.lineup, squad, htTactic.formation)) {
@@ -170,6 +187,43 @@ export default function MatchLivePage() {
           {status === 'FINISHED' && queue.length === 0 ? '경기 종료' : `${lastMinute}'`}
         </p>
       </Card>
+
+      {/* 상대 전술 보기 */}
+      <div className="mt-3">
+        <button
+          onClick={toggleOpponent}
+          disabled={loadingOpp}
+          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-2 text-sm text-zinc-300 transition hover:border-zinc-600 disabled:opacity-50"
+        >
+          {loadingOpp ? '불러오는 중...' : showOpp ? '상대 전술 닫기 ▲' : '🔍 상대 전술 보기 ▼'}
+        </button>
+
+        {showOpp && oppTactic && (
+          <Card className="mt-2 border-red-500/30 bg-red-500/5">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-red-200">{oppTactic.teamName}</span>
+              <span className="text-xs text-zinc-500">
+                {oppTactic.live ? '실시간' : '경기 전 예상'}
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+              <span className="rounded bg-zinc-800 px-2 py-1 font-semibold">{oppTactic.formation}</span>
+              <span className="rounded bg-zinc-800 px-2 py-1">{oppTactic.mentalityLabel}</span>
+              <span className="rounded bg-zinc-800 px-2 py-1">압박 {oppTactic.pressingLabel}</span>
+              <span className="rounded bg-zinc-800 px-2 py-1">라인 {oppTactic.lineHeightLabel}</span>
+              <span className="rounded bg-zinc-800 px-2 py-1">{oppTactic.attackStyleLabel}</span>
+            </div>
+            {oppTactic.recentChanges.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-zinc-500">상대 전술 변화</p>
+                <ul className="mt-1 flex flex-col gap-0.5 text-xs text-amber-200/80">
+                  {oppTactic.recentChanges.map((c, i) => <li key={i}>· {c}</li>)}
+                </ul>
+              </div>
+            )}
+          </Card>
+        )}
+      </div>
 
       {/* 중계 피드 */}
       <div className="mt-4 flex flex-col gap-2">
