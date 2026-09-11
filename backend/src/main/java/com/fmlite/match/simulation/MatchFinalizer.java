@@ -27,7 +27,9 @@ public class MatchFinalizer {
                                                   Map<Long, List<Player>> squads,
                                                   Map<Long, String> teamNames) {
         FinalOutcome outcome = resultCalculator.finalize(state, squads, teamNames);
-        List<MatchEventResponse> events = eventWriter.persist(match, state, outcome.extraEvents());
+        List<MatchEventResponse> events = match.isUserMatch()
+                ? eventWriter.persist(match, state, outcome.extraEvents())
+                : List.of();
 
         matchResultRepository.save(new MatchResult(
                 match.getId(), state.getHomeScore(), state.getAwayScore(),

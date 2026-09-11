@@ -27,7 +27,6 @@ public class AiMatchRunner {
     private final TacticRepository tacticRepository;
     private final TeamRepository teamRepository;
     private final OpponentAiService opponentAi;
-    private final MatchEventWriter eventWriter;
 
     public void simulate(Match match) {
         if (match.getStatus() == MatchStatus.FINISHED) return;
@@ -45,7 +44,6 @@ public class AiMatchRunner {
         match.updateState(state, MatchStatus.IN_PROGRESS);
 
         var outcome = engine.run(new EngineContext(match.getRound(), squads, names, state));
-        eventWriter.persist(match, state, outcome.events());
         finalizer.finalizeMatch(match, state, squads, names);
     }
 
