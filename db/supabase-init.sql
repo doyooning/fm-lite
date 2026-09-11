@@ -1,4 +1,20 @@
--- ===== 마스터 데이터 =====
+-- =============================================================================
+-- FM Lite — 통합 초기화 SQL (Flyway V1~V6 최종 상태)
+--
+-- 용도: 새 Supabase 프로젝트(리전 이전 포함)를 SQL Editor에서 한 번에 세팅할 때.
+--       백엔드를 Flyway와 함께 붙일 수 있다면 이 파일은 필요 없다 —
+--       빈 DB에 접속정보만 주면 기동 시 V1~V6이 자동 적용된다.
+--
+-- 주의: 이 파일로 수동 생성한 뒤 백엔드를 Flyway와 연결하려면, 기동 전에
+--         SPRING_FLYWAY_BASELINE_ON_MIGRATE=true
+--         SPRING_FLYWAY_BASELINE_VERSION=6
+--       를 줘서 기존 테이블을 V6까지 적용된 상태로 인식시켜야 한다.
+--
+-- 이 파일을 고칠 때: 스키마의 기준은 마이그레이션(V1~V6)이고 이 파일은 그 통합본이다.
+--                   새 마이그레이션을 추가하면 이 파일에도 같은 변경을 반영할 것.
+-- =============================================================================
+
+-- ===== 마스터 데이터 (seed 후 불변) =====
 create table teams (
     id          bigint generated always as identity primary key,
     name        varchar(50)  not null unique,
@@ -23,27 +39,54 @@ create table players (
     mentality    int not null check (mentality between 1 and 99),
     finishing    int not null check (finishing between 1 and 99),
     goalkeeping  int not null check (goalkeeping between 1 and 99),
-    traits       text[] not null default '{}',
+    traits       text[] not null default '{}',   -- PlayerTrait enum 코드 배열 (0~2개)
     created_at   timestamptz not null default now(),
     unique (team_id, back_number)
 );
 create index idx_players_team on players (team_id);
 
--- ===== 사용자 / 게임 상태 =====
+-- ===== 계정 (V4 이메일 인증 / V6 통산 우승·업적) =====
 create table users (
-    id         uuid primary key,
-    nickname   varchar(30) not null default '감독',
+    id             uuid primary key,                -- 앱에서 생성한 UUID를 그대로 저장
+    nickname       varchar(30) not null default '감독',
+    email          varchar(255),                    -- nullable: 소셜 로그인 등 forward-compat
+    password_hash  varchar(100),
+    email_verified boolean not null default false,
+    championships  int not null default 0,          -- 게임을 삭제해도 유지되는 누적 우승 횟수
+    created_at     timestamptz not null default now(),
+    updated_at     timestamptz not null default now()
+);
+create unique index uq_users_email on users (lower(email));   -- 대소문자 무시 중복 불허
+
+create table email_verification_tokens (
+    id         bigint generated always as identity primary key,
+    user_id    uuid not null references users (id),
+    token      varchar(120) not null unique,        -- 불투명 랜덤 토큰
+    expires_at timestamptz not null,
+    used_at    timestamptz,
     created_at timestamptz not null default now()
 );
+create index idx_evt_user on email_verification_tokens (user_id);
 
+create table user_achievements (
+    id          bigint generated always as identity primary key,
+    user_id     uuid not null references users (id),
+    code        varchar(40) not null,
+    achieved_at timestamptz not null default now(),
+    unique (user_id, code)                          -- 계정별 1회 획득
+);
+create index idx_user_achievements_user on user_achievements (user_id);
+
+-- ===== 게임 상태 =====
 create table save_games (
-    id         bigint generated always as identity primary key,
-    user_id    uuid   not null references users (id),
-    team_id    bigint not null references teams (id),
-    status     varchar(20) not null default 'IN_PROGRESS'
-               check (status in ('IN_PROGRESS', 'CHAMPION', 'ELIMINATED')),
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
+    id           bigint generated always as identity primary key,
+    user_id      uuid   not null references users (id),
+    team_id      bigint not null references teams (id),
+    status       varchar(20) not null default 'IN_PROGRESS'
+                 check (status in ('IN_PROGRESS', 'CHAMPION', 'ELIMINATED')),
+    manager_name varchar(30) not null default '감독',
+    created_at   timestamptz not null default now(),
+    updated_at   timestamptz not null default now()
 );
 create index idx_save_games_user on save_games (user_id);
 
@@ -56,20 +99,22 @@ create table competitions (
                    check (current_round in ('QF', 'SF', 'FINAL', 'FINISHED')),
     winner_team_id bigint references teams (id),
     created_at     timestamptz not null default now(),
-    unique (save_game_id)
+    unique (save_game_id)                      -- MVP: 저장 게임당 대회 1개
 );
 
 create table matches (
     id               bigint generated always as identity primary key,
     competition_id   bigint not null references competitions (id),
     round            varchar(10) not null check (round in ('QF', 'SF', 'FINAL')),
-    match_no         int    not null,
+    match_no         int    not null,           -- 라운드 내 순번 (대진표 위치)
     home_team_id     bigint not null references teams (id),
     away_team_id     bigint not null references teams (id),
     is_user_match    boolean not null default false,
     status           varchar(20) not null default 'SCHEDULED'
-                     check (status in ('SCHEDULED', 'IN_PROGRESS', 'WAITING_CHOICE', 'FINISHED')),
-    simulation_state jsonb,
+                     check (status in ('SCHEDULED', 'IN_PROGRESS', 'WAITING_CHOICE',
+                                       'WAITING_HALFTIME', 'FINISHED')),
+    simulation_state jsonb,                     -- 진행 스냅샷. 선택지/하프타임 재개용이자
+                                                -- seed·라인업·컨디션을 담고 있어 경기 재현의 근거가 된다
     created_at       timestamptz not null default now(),
     unique (competition_id, round, match_no)
 );
@@ -84,6 +129,7 @@ create table tactics (
     pressing     varchar(10) not null check (pressing in ('LOW', 'NORMAL', 'HIGH')),
     line_height  varchar(10) not null check (line_height in ('LOW', 'NORMAL', 'HIGH')),
     attack_style varchar(12) not null check (attack_style in ('CENTER', 'WIDE', 'COUNTER', 'POSSESSION')),
+    lineup       jsonb,                         -- 선발 11명 player_id 배열. null 이면 베스트 XI 자동 선발
     updated_at   timestamptz not null default now(),
     unique (match_id, team_id)
 );
@@ -93,12 +139,13 @@ create table match_events (
     match_id           bigint not null references matches (id),
     seq                int    not null,
     minute             int    not null,
-    event_type         varchar(20) not null,
+    event_type         varchar(20) not null,   -- KICK_OFF/CHANCE/GOAL/SAVE/MISS/HALF_TIME/TACTIC_CHANGE/
+                                               -- CHOICE/COACH_DECISION/FULL_TIME/PENALTY_SHOOTOUT
     team_id            bigint references teams (id),
     player_id          bigint references players (id),
     description        text   not null,
     requires_choice    boolean not null default false,
-    choice_options     jsonb,
+    choice_options     jsonb,                  -- [{"id":"PUSH_FORWARD","label":"...","description":"..."}]
     selected_choice_id varchar(30),
     created_at         timestamptz not null default now(),
     unique (match_id, seq)

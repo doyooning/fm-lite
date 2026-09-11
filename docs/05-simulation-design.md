@@ -143,6 +143,19 @@ gkPower      = GK: goalkeeping × 컨디션
    - 결승 종료 → `competitions.winner_team_id` 기록, SaveGame.status = CHAMPION 또는 ELIMINATED.
    - 사용자 패배 시: 남은 대회를 자동 시뮬레이션으로 마무리 후 ELIMINATED.
 
+### AI vs AI 경기의 저장 정책
+
+AI 경기는 **결과와 통계만 남기고 분 단위 이벤트를 저장하지 않는다** (`match_events` 행 0건).
+스코어·승부차기·통계는 `match_results`에, 진행 스냅샷은 `matches.simulation_state`에 남는다.
+
+아무도 읽지 않는 이벤트를 경기당 12~18건씩 INSERT하면서 응답시간을 잡아먹기 때문이다
+(사용자의 75분 선택 한 번에 최대 6경기분이 붙는다). 설계·측정 근거는
+[docs/specs/001-ai-match-result-only.md](specs/001-ai-match-result-only.md).
+
+나중에 '다른 팀 경기 실시간 조회'가 필요해지면 저장된 이벤트를 읽는 대신
+**`simulation_state.seed` + `tactics`로 경기를 재현**한다. 틱별 난수가
+`new Random(seed ^ 7919 × (tick+1))`로 파생되어 결정론적이므로 같은 경기가 그대로 재생된다.
+
 ## 중계 텍스트 (MVP)
 
 `MatchEventGenerator`가 이벤트 타입별 템플릿 풀에서 랜덤 선택 + 변수 치환:

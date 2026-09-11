@@ -45,11 +45,41 @@ pool size는 5 이하 권장.)
 Supabase SQL Editor에 붙여넣어 실행한다.
 
 > 주의: 방법 B로 만든 뒤 나중에 백엔드를 Flyway와 함께 연결하려면 기동 전에
-> `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true`, `SPRING_FLYWAY_BASELINE_VERSION=2` 를 줘서
-> 기존 테이블을 V2까지 적용된 상태로 인식시켜야 한다.
+> `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true`, `SPRING_FLYWAY_BASELINE_VERSION=6` 을 줘서
+> 기존 테이블을 V6까지 적용된 상태로 인식시켜야 한다.
+> (`db/supabase-init.sql` 은 V1~V6 통합본이다. 마이그레이션을 추가하면 이 번호도 함께 올릴 것.)
 
 - RLS: 현재 해제 상태(사용자 확인). 백엔드가 유일한 DB 클라이언트이므로 MVP에서는 문제없고,
   추후 적용 시에도 JDBC(postgres 롤) 경유라 정책 영향 없음.
+
+## 2-1. 리전 이전 (예: 시드니 → 서울)
+
+Supabase는 프로젝트 생성 후 리전을 바꿀 수 없으므로 **새 프로젝트를 만들어 옮긴다.**
+DB 왕복 지연이 응답시간에 그대로 곱해지기 때문에(시드니 기준 쿼리 1회 ≈ 0.46초) 체감 효과가 크다.
+
+1. Supabase에서 **서울(ap-northeast-2)** 리전으로 새 프로젝트 생성
+2. 스키마 적용 — 둘 중 하나
+   - **Flyway (권장)**: 빈 DB 그대로 두고, 아래 5번의 환경변수만 새 프로젝트 값으로 바꿔 백엔드를 기동하면
+     V1~V6이 자동 적용된다. 별도 SQL 실행이 필요 없다.
+   - **SQL Editor**: `db/supabase-init.sql`(V1~V6 통합본)을 붙여넣어 실행.
+     이후 Flyway와 연결하려면 2절의 baseline 설정(V6)이 필요하다.
+3. 데이터 이관이 필요하면 (계정·저장 게임을 유지하려는 경우에만):
+   ```bash
+   # 스키마는 위에서 이미 만들었으므로 데이터만 옮긴다
+   pg_dump --data-only --no-owner --disable-triggers      "postgresql://<구 프로젝트 접속문자열>" > data.sql
+   psql "postgresql://<신 프로젝트 접속문자열>" -f data.sql
+   ```
+   MVP 단계에서 테스트 계정뿐이라면 생략하고 새로 시작하는 편이 깔끔하다.
+4. 시드 중복 주의 — 2번에서 스키마와 함께 시드(팀/선수)가 들어간다. 3번으로 데이터를 이관한다면
+   `teams`/`players`는 제외하거나, 반대로 시드 없이 스키마만 만든 뒤 전체를 이관할 것.
+5. 접속정보 교체 — `env/.env` 의 `SPRING_DATASOURCE_URL` / `USERNAME` / `PASSWORD` 를
+   새 프로젝트의 **Session pooler** 값으로 변경 후 백엔드 재기동
+6. 확인
+   ```bash
+   curl -s -o /dev/null -w "%{time_total}s
+" http://localhost:8080/api/v1/matches/1/events
+   ```
+   시드니에서 0.4~0.5초대였던 값이 서울 리전에서는 크게 줄어야 한다.
 
 ## 3. 배포
 

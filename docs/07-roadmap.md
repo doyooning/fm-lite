@@ -58,6 +58,7 @@
 | 높음 | **AI 상대 분석/전술 추천 문장** | 현재 규칙 기반 JSON을 LLM 프롬프트 입력으로 재사용 |
 | 높음 | **경기 간 체력/컨디션 이월** | `save_game_players` 스냅샷 테이블 도입 (save_game_id, player_id, condition, fatigue). 선수 성장의 기반이 됨 |
 | 중간 | **선발 라인업/교체 수동 편집** | Tactic에 lineup jsonb 추가, 경기 중 교체 선택지 |
+| 높음 | **다른 팀 경기 실시간 조회** | AI 경기는 이벤트를 저장하지 않으므로, `simulation_state.seed` + `tactics`로 경기를 재현해 중계한다. 엔진 상수를 튜닝하면 과거 경기의 재현 결과가 달라질 수 있어 저장된 `match_results`를 정답으로 삼는 규칙이 필요 |
 | 중간 | **부상/징계** | MatchEvent에 INJURY/CARD 타입 추가, save_game_players에 상태 기록 |
 | 중간 | **선수 성장** | 경기 출전·평점 기반 능력치 상승 (save_game_players 위에 구현) |
 | 중간 | **시즌 모드 (리그전)** | Competition.type=LEAGUE, 승점 테이블 추가. Match 구조는 재사용 |
