@@ -16,20 +16,21 @@ public class TeamPowerCalculator {
 
     public record Powers(double attack, double midfield, double defense, double gk) {}
 
-    public Powers matchPowers(List<Player> lineup, TeamSimState team, TacticContext ctx) {
+    public Powers matchPowers(List<LineupSelector.Slot> lineup, TeamSimState team, TacticContext ctx) {
         double staminaFactor = staminaFactor(team.getStamina());
 
         double attack = 0, midfield = 0, defense = 0, gk = 0;
         int fw = 0, mf = 0, df = 0;
 
-        for (Player p : lineup) {
+        for (LineupSelector.Slot slot : lineup) {
+            Player p = slot.player();
             double cond = team.getCondition().getOrDefault(p.getId(), 1.0);
             double traitMult = 1.0;
             if (p.hasTrait(PlayerTrait.BIG_GAME_PLAYER) && ctx.round() != Round.QF) traitMult *= 1.05;
             if (p.hasTrait(PlayerTrait.LOW_STAMINA) && ctx.tick() >= 12) traitMult *= 0.90;
             double eff = cond * traitMult;
 
-            switch (p.getPosition()) {
+            switch (slot.role()) {
                 case FW -> {
                     attack += (p.getAttack() * 0.4 + p.getFinishing() * 0.4 + p.getSpeed() * 0.2) * eff;
                     fw++;
@@ -73,7 +74,7 @@ public class TeamPowerCalculator {
         return count == 0 ? 1 : sum / count;
     }
 
-    public Player goalkeeper(List<Player> lineup) {
-        return lineup.stream().filter(p -> p.getPosition() == Position.GK).findFirst().orElse(lineup.get(0));
+    public Player goalkeeper(List<LineupSelector.Slot> lineup) {
+        return lineup.stream().filter(s -> s.role() == Position.GK).findFirst().orElse(lineup.get(0)).player();
     }
 }

@@ -38,7 +38,7 @@ export default function TacticsPage() {
   const save = async (thenStart: boolean) => {
     if (!matchId || !tactic) return;
     if (!isValidLineup(tactic.lineup, squad, tactic.formation)) {
-      setError('선발 라인업이 포메이션 인원과 맞지 않습니다.');
+      setError('선발 라인업은 11명이어야 하며 중복될 수 없습니다.');
       return;
     }
     setSaving(true);
@@ -55,11 +55,11 @@ export default function TacticsPage() {
   if (!tactic) return <Spinner />;
 
   return (
-    <main className="mx-auto w-full max-w-3xl p-6">
+    <main className="mx-auto w-full max-w-5xl p-6">
       <BackButton fallbackHref={`/game/${id}`} />
       <h1 className="text-2xl font-bold">경기 전 전술 설정</h1>
       <p className="mt-1 text-sm text-zinc-400">
-        킥오프 전 마지막 준비입니다. 선발은 베스트 XI로 맞춰져 있고, 원하는 선수로 교체할 수 있습니다.
+        킥오프 전 마지막 준비입니다. 선발은 베스트 XI로 맞춰져 있습니다. 선수단에서 선수를 끌어다 원하는 자리에 배치하세요.
       </p>
 
       <Card className="mt-5">

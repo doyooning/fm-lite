@@ -78,7 +78,7 @@ public class TacticService {
         if (request.lineup() != null && !request.lineup().isEmpty()) {
             if (!lineupSelector.isValidLineup(request.lineup(), squad, request.formation())) {
                 throw BusinessException.badRequest("INVALID_LINEUP",
-                        "선발 라인업이 포메이션 규칙(포지션별 인원)에 맞지 않습니다.");
+                        "선발 라인업은 우리 팀 선수 11명(중복 없음)이어야 합니다.");
             }
             return request.lineup();
         }

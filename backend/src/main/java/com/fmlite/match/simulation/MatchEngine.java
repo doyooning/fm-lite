@@ -117,12 +117,16 @@ public class MatchEngine {
         drainStamina(away);
 
         // 3. 전력/보정치 계산
-        List<Player> homeLineup = lineupSelector.lineupPlayers(ctx.squads().get(home.getTeamId()), home.getLineup());
-        List<Player> awayLineup = lineupSelector.lineupPlayers(ctx.squads().get(away.getTeamId()), away.getLineup());
+        var homeSlots = lineupSelector.slots(ctx.squads().get(home.getTeamId()), home.getLineup(),
+                home.getTactic().formationEnum());
+        var awaySlots = lineupSelector.slots(ctx.squads().get(away.getTeamId()), away.getLineup(),
+                away.getTactic().formationEnum());
+        List<Player> homeLineup = homeSlots.stream().map(LineupSelector.Slot::player).toList();
+        List<Player> awayLineup = awaySlots.stream().map(LineupSelector.Slot::player).toList();
 
-        Powers homePowers = powerCalculator.matchPowers(homeLineup, home,
+        Powers homePowers = powerCalculator.matchPowers(homeSlots, home,
                 new TacticContext(ctx.round(), tick, away.getTactic().pressingEnum()));
-        Powers awayPowers = powerCalculator.matchPowers(awayLineup, away,
+        Powers awayPowers = powerCalculator.matchPowers(awaySlots, away,
                 new TacticContext(ctx.round(), tick, home.getTactic().pressingEnum()));
 
         var homeMods = tacticEvaluation.evaluate(home, away, homeLineup);
@@ -149,17 +153,17 @@ public class MatchEngine {
         }
 
         if (homeChance) {
-            resolveChance(ctx, st, tick, rng, events, true, homeLineup, awayLineup, awayPowers,
+            resolveChance(ctx, st, tick, rng, events, true, homeSlots, awaySlots, awayPowers,
                     homeMods.qualityMult() * effectQualityMult(st, true));
         } else if (awayChance) {
-            resolveChance(ctx, st, tick, rng, events, false, awayLineup, homeLineup, homePowers,
+            resolveChance(ctx, st, tick, rng, events, false, awaySlots, homeSlots, homePowers,
                     awayMods.qualityMult() * effectQualityMult(st, false));
         }
     }
 
     private void resolveChance(EngineContext ctx, SimulationState st, int tick, Random rng,
                                List<EventDraft> events, boolean isHome,
-                               List<Player> attackers, List<Player> defenders,
+                               List<LineupSelector.Slot> attackers, List<LineupSelector.Slot> defenders,
                                Powers defPowers, double quality) {
         TeamSimState atkTeam = st.side(isHome);
         TeamSimState defTeam = st.side(!isHome);
@@ -206,15 +210,15 @@ public class MatchEngine {
         }
     }
 
-    private Player pickAttacker(List<Player> lineup, TeamSimState defTeam, Random rng) {
-        List<Player> candidates = lineup.stream()
-                .filter(p -> p.getPosition() == Position.FW || p.getPosition() == Position.MF)
+    private Player pickAttacker(List<LineupSelector.Slot> lineup, TeamSimState defTeam, Random rng) {
+        List<LineupSelector.Slot> candidates = lineup.stream()
+                .filter(s -> s.role() == Position.FW || s.role() == Position.MF)
                 .toList();
         double[] weights = new double[candidates.size()];
         double total = 0;
         for (int i = 0; i < candidates.size(); i++) {
-            Player p = candidates.get(i);
-            double w = (p.getAttack() + p.getFinishing()) * (p.getPosition() == Position.FW ? 1.0 : 0.45);
+            Player p = candidates.get(i).player();
+            double w = (p.getAttack() + p.getFinishing()) * (candidates.get(i).role() == Position.FW ? 1.0 : 0.45);
             if (p.hasTrait(PlayerTrait.RUN_IN_BEHIND)
                     && defTeam.getTactic().lineHeightEnum() == LineHeight.HIGH) w *= 1.8;
             if (p.hasTrait(PlayerTrait.LONG_SHOT)) w *= 1.2;
@@ -224,9 +228,9 @@ public class MatchEngine {
         double r = rng.nextDouble() * total;
         for (int i = 0; i < weights.length; i++) {
             r -= weights[i];
-            if (r <= 0) return candidates.get(i);
+            if (r <= 0) return candidates.get(i).player();
         }
-        return candidates.get(candidates.size() - 1);
+        return candidates.get(candidates.size() - 1).player();
     }
 
     private void adjustAi(EngineContext ctx, SimulationState st, TeamSimState me, TeamSimState opp,

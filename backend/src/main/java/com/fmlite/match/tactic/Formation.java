@@ -29,6 +29,18 @@ public enum Formation {
         return slots;
     }
 
+    /**
+     * 슬롯 순서대로의 역할 목록 (GK → DF → MF → FW). 라인업의 i번째 선수는 i번째 슬롯 역할을 수행한다.
+     * 선수의 본래 포지션과 무관하게 어느 슬롯에도 배치할 수 있다.
+     */
+    public java.util.List<Position> slotRoles() {
+        java.util.List<Position> roles = new java.util.ArrayList<>();
+        for (Position p : new Position[]{Position.GK, Position.DF, Position.MF, Position.FW}) {
+            for (int i = 0; i < slots.getOrDefault(p, 0); i++) roles.add(p);
+        }
+        return roles;
+    }
+
     @JsonCreator
     public static Formation fromValue(String value) {
         for (Formation f : values()) {

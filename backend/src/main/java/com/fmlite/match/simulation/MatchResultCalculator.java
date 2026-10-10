@@ -68,10 +68,14 @@ public class MatchResultCalculator {
 
     /** 간이 승부차기: 5라운드 + 서든데스(최대 5라운드 추가) */
     private int[] shootout(SimulationState st, Map<Long, List<Player>> squads, Random rng) {
-        List<Player> homeKickers = kickers(squads.get(st.getHome().getTeamId()), st.getHome().getLineup());
-        List<Player> awayKickers = kickers(squads.get(st.getAway().getTeamId()), st.getAway().getLineup());
-        Player homeGk = gk(squads.get(st.getHome().getTeamId()), st.getHome().getLineup());
-        Player awayGk = gk(squads.get(st.getAway().getTeamId()), st.getAway().getLineup());
+        var homeSlots = lineupSelector.slots(squads.get(st.getHome().getTeamId()), st.getHome().getLineup(),
+                st.getHome().getTactic().formationEnum());
+        var awaySlots = lineupSelector.slots(squads.get(st.getAway().getTeamId()), st.getAway().getLineup(),
+                st.getAway().getTactic().formationEnum());
+        List<Player> homeKickers = kickers(homeSlots);
+        List<Player> awayKickers = kickers(awaySlots);
+        Player homeGk = gk(homeSlots);
+        Player awayGk = gk(awaySlots);
 
         int home = 0, away = 0;
         for (int round = 0; round < 10; round++) {
@@ -96,18 +100,18 @@ public class MatchResultCalculator {
         return Math.max(0.40, Math.min(0.95, p));
     }
 
-    private List<Player> kickers(List<Player> squad, List<Long> lineup) {
-        return lineupSelector.lineupPlayers(squad, lineup).stream()
-                .filter(p -> p.getPosition() != Position.GK)
+    private List<Player> kickers(List<LineupSelector.Slot> slots) {
+        return slots.stream()
+                .filter(s -> s.role() != Position.GK)
+                .map(LineupSelector.Slot::player)
                 .sorted(Comparator.comparingInt((Player p) -> p.getFinishing() + p.getMentality()).reversed())
                 .limit(5)
                 .toList();
     }
 
-    private Player gk(List<Player> squad, List<Long> lineup) {
-        return lineupSelector.lineupPlayers(squad, lineup).stream()
-                .filter(p -> p.getPosition() == Position.GK)
-                .findFirst().orElseThrow();
+    private Player gk(List<LineupSelector.Slot> slots) {
+        return slots.stream().filter(s -> s.role() == Position.GK)
+                .findFirst().orElse(slots.get(0)).player();
     }
 
     private int mentalitySum(List<Player> players) {

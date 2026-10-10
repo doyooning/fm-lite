@@ -140,7 +140,7 @@ export default function MatchLivePage() {
   const submitHalftime = useCallback(async () => {
     if (!htTactic || submittingHt) return;
     if (!isValidLineup(htTactic.lineup, squad, htTactic.formation)) {
-      setError('선발 라인업이 포메이션 인원과 맞지 않습니다.');
+      setError('선발 라인업은 11명이어야 하며 중복될 수 없습니다.');
       return;
     }
     setSubmittingHt(true);
