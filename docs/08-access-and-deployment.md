@@ -76,8 +76,8 @@ ngrok http 8080     # → https://<랜덤>.ngrok-free.app 발급
 1. 백엔드 컨테이너화 (아래 Dockerfile 참고) 후 호스팅 플랫폼에 배포.
 2. 플랫폼 환경변수로 아래를 주입 (`env/.env` 대신):
    ```
-   SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
-   SPRING_DATASOURCE_USERNAME=postgres.klkjooqskbmrskbjowrb
+   SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+   SPRING_DATASOURCE_USERNAME=postgres.tnsykoqjaoggbbdzzhxq
    SPRING_DATASOURCE_PASSWORD=<db-password>
    DB_POOL_SIZE=5
    FRONTEND_ORIGIN=https://fm-lite-gamma.vercel.app
